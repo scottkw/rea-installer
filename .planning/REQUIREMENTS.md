@@ -72,31 +72,31 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FAIL-01 | — | Pending |
-| FAIL-02 | — | Pending |
-| FAIL-03 | — | Pending |
-| DRY-01 | — | Pending |
-| DRY-02 | — | Pending |
-| JAVA-01 | — | Pending |
-| JAVA-02 | — | Pending |
-| JAVA-03 | — | Pending |
-| JAVA-04 | — | Pending |
-| UNIN-01 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
-| MAC-01 | — | Pending |
-| MAC-02 | — | Pending |
-| DOCS-01 | — | Pending |
+| FAIL-01 | Phase 1 | Pending |
+| FAIL-02 | Phase 1 | Pending |
+| FAIL-03 | Phase 1 | Pending |
+| DRY-01 | Phase 1 | Pending |
+| DRY-02 | Phase 1 | Pending |
+| JAVA-01 | Phase 2 | Pending |
+| JAVA-02 | Phase 2 | Pending |
+| JAVA-03 | Phase 2 | Pending |
+| JAVA-04 | Phase 2 | Pending |
+| UNIN-01 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Pending |
+| TEST-05 | Phase 1 | Pending |
+| TEST-06 | Phase 1 | Pending |
+| MAC-01 | Phase 3 | Pending |
+| MAC-02 | Phase 3 | Pending |
+| DOCS-01 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 19 total
-- Mapped to phases: 0 (filled by roadmap)
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-10-14*
-*Last updated: 2026-10-14 after initial definition*
+*Last updated: 2026-10-14 after roadmap creation (traceability filled)*
