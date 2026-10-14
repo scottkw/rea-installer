@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: consistent-java-handling
-status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-10-14T21:13:01.649Z"
+status: verifying
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-10-14T21:19:25.372Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 2 execution started
-state_head: e42bdd0bb05dde48b5cd2da6ce13368758450e2c
+state_head: 085dd70c285915763d589ae7310f3eec73007809
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 
 Phase: 02 (consistent-java-handling) — READY TO EXECUTE
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-14 — Phase 2 execution started
 
 Progress: [███░░░░░░░] 33%
@@ -65,6 +65,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P02 | 3 min | 2 tasks | 2 files |
 | Phase 02 P03 | 3 min | 2 tasks | 2 files |
 | Phase 02 P04 | 7 min | 3 tasks | 3 files |
+| Phase 02 P05 | 4 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Recent decisions affecting current work:
 - [Phase 02]: macOS rerun restores the script's JAVA_HOME when jdk_owned (ledger brew:openjdk@21 or the block's own export line); a usable user JDK 21+ is still reused and never written
 - [Phase 02]: macOS jdk_home dies on a failing brew --prefix; a dry run without brew plans Homebrew's default prefix with a warning; every caller assigns it in a plain statement
 - [Phase 02]: Linux install_jdk replaces an unusable ~/.rea-installer/jdk on rerun (through run) and refuses an extracted Temurin folder without bin/java or an empty release name
+- [Phase 02]: Windows rerun replaces a user JAVA_HOME only when the ledger holds env:JAVA_HOME (CR-01); a value the script never set keeps D-05 warn-and-leave
+- [Phase 02]: Windows -DryRun changes no session variable: $JdkPlanned marks the planned JDK and Set-UserEnv returns before Set-Item (WR-03, supersedes D-09 placeholder)
+- [Phase 02]: Accepted review findings are stored as deferred with an 'accepted 2026-10-14:' Source cell, because the disposition gate resets other values to open
 
 ### Pending Todos
 
@@ -118,6 +122,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T21:13:01.616Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-10-14T21:19:25.338Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
