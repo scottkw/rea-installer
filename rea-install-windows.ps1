@@ -110,14 +110,20 @@ function Install-Winget([string]$Id) {
     Update-SessionPath
 }
 
+# One place reads persistent user variables, so test.sh can stand in for the User scope that Unix pwsh lacks.
+function Get-UserEnv([string]$Name) {
+    return [Environment]::GetEnvironmentVariable($Name, 'User')
+}
+
 # Sets a persistent user environment variable (visible to agents started from anywhere) and this session's copy.
-function Set-UserEnv([string]$Name, [string]$Value) {
-    $existing = [Environment]::GetEnvironmentVariable($Name, 'User')
+function Set-UserEnv([string]$Name, [string]$Value, [switch]$Replace) {
+    $existing = Get-UserEnv $Name
     if ($existing -eq $Value) { return }
-    if ($existing) {
+    if ($existing -and -not $Replace) {
         Warn "$Name is already set for your user to $existing; leaving it as-is."
         return
     }
+    if ($existing) { Log "Replacing $Name for your user (was $existing, set by this script earlier)." }
     Write-Host "  > setx $Name `"$Value`""
     Set-Item "env:$Name" $Value
     if ($DryRun) { return }
@@ -187,9 +193,11 @@ function Install-Jdk {
     if (-not $javaCmd) { throw 'Temurin installed but java is not on PATH.' }
     $dir = Split-Path (Split-Path $javaCmd.Source)
     if (-not (Test-JdkUsable $dir)) { throw "Temurin installed but the java on PATH is in $dir, which is not JDK 21 or newer." }
-    # Set-UserEnv leaves an existing user value in place without touching the session, so set the session first.
+    # Temurin upgrades move the versioned folder, so replace a user value only when our own ledger says we set it
+    # (CR-01). Set-UserEnv leaves any other user value without touching the session, so set the session first.
+    $owned = (Test-Path $StateFile) -and (@(Get-Content $StateFile) -contains 'env:JAVA_HOME')
     $env:JAVA_HOME = $dir
-    Set-UserEnv 'JAVA_HOME' $dir
+    Set-UserEnv 'JAVA_HOME' $dir -Replace:$owned
 }
 
 function Invoke-Install {

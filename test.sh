@@ -471,6 +471,8 @@ param([string]$Script, [string]$Work, [string]$Jdks, [string]$Temurin)
 . $Script *> $null
 # On Unix pwsh the Machine and User Path read as empty, so the real one would set PATH to ';'.
 function Update-SessionPath {}
+# Unix pwsh has no User scope: a test sets $env:REA_TEST_USER_<NAME> to play the user's saved value.
+function Get-UserEnv([string]$Name) { return [Environment]::GetEnvironmentVariable("REA_TEST_USER_$Name") }
 $ToolsDir = Join-Path $Work 'tools'
 $StateDir = Join-Path $Work 'state'
 $StateFile = Join-Path $StateDir 'installed'
@@ -541,6 +543,41 @@ if (Test-Path $StateFile) { $ledger = @(Get-Content $StateFile) }
 Report (($env:JAVA_HOME -eq $Temurin) -and ($ledger -contains 'env:JAVA_HOME') -and
         ($ledger -contains 'winget:EclipseAdoptium.Temurin.21.JDK')) 'JAVA-01 Windows Install-Jdk sets JAVA_HOME from the java on PATH and records it'
 $env:PATH = $savedPath
+
+# CR-01: a Temurin upgrade removed the folder the script saved earlier; the ledger says the script owns JAVA_HOME.
+$savedPath = $env:PATH
+New-Item -ItemType Directory -Force $StateDir | Out-Null
+Set-Content -Path $StateFile -Value 'env:JAVA_HOME'
+$stale = Join-Path $Work 'gone/jdk-21.0.4.7-hotspot'
+$env:REA_TEST_USER_JAVA_HOME = $stale
+$env:JAVA_HOME = $stale
+$env:PATH = (Join-Path $Temurin 'bin') + [IO.Path]::PathSeparator + $env:PATH
+$out = @()
+try { $out = @(Install-Jdk *>&1 | ForEach-Object { "$_" }) } catch { Write-Host "caught: $_" }
+Report (($env:JAVA_HOME -eq $Temurin) -and
+        @($out | Where-Object { $_.Contains('setx JAVA_HOME') -and $_.Contains($Temurin) }).Count -gt 0 -and
+        @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -eq 0) 'JAVA-01 Windows Install-Jdk replaces a stale user JAVA_HOME it set earlier'
+$out | ForEach-Object { Write-Host $_ }
+$env:PATH = $savedPath
+Remove-Item env:REA_TEST_USER_JAVA_HOME -ErrorAction SilentlyContinue
+
+# D-05: a user JAVA_HOME the script never set is left as-is; only the session gets Temurin.
+$savedPath = $env:PATH
+Remove-Item -Force $StateFile -ErrorAction SilentlyContinue
+$env:REA_TEST_USER_JAVA_HOME = Join-Path $Work 'other/jdk-21'
+$env:JAVA_HOME = Join-Path $Jdks '17'
+$env:PATH = (Join-Path $Temurin 'bin') + [IO.Path]::PathSeparator + $env:PATH
+$out = @()
+try { $out = @(Install-Jdk *>&1 | ForEach-Object { "$_" }) } catch { Write-Host "caught: $_" }
+$ledger = @()
+if (Test-Path $StateFile) { $ledger = @(Get-Content $StateFile) }
+Report (($env:JAVA_HOME -eq $Temurin) -and
+        @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -gt 0 -and
+        @($out | Where-Object { $_.Contains('setx JAVA_HOME') }).Count -eq 0 -and
+        -not ($ledger -contains 'env:JAVA_HOME')) 'JAVA-01 Windows Install-Jdk leaves a user JAVA_HOME it did not set'
+$out | ForEach-Object { Write-Host $_ }
+$env:PATH = $savedPath
+Remove-Item env:REA_TEST_USER_JAVA_HOME -ErrorAction SilentlyContinue
 EOF
   # Temp HOME so pwsh's caches and the script's default folders never touch the real one.
   PATH="$stub_path" HOME="$work/pwsh-home" pwsh -NoProfile -File "$work/w.ps1" -Script "$WIN" -Work "$work/win" \
