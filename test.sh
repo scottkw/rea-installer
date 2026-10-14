@@ -133,5 +133,103 @@ for script in "$LINUX" "$MACOS"; do
   if [ "$rc" -eq 0 ] && [ "$(cat "$work/out")" = loaded ]; then ok "GUARD sourced skips main ($name)"; else bad "GUARD sourced skips main ($name)"; fi
 done
 
+# Prints the last sandbox or container output indented, so a FAIL line shows its reason.
+show() { sed 's/^/    /' "$work/out"; }
+
+# Shared with the Windows checks: STUB_TAR=fail leaves a partial foo-1.0 in the -C folder and fails; otherwise real tar.
+# shellcheck disable=SC2016  # expanded by the stub
+stub tar 'if [ "${STUB_TAR:-}" = fail ]; then
+  while [ $# -gt 0 ]; do [ "$1" = -C ] && d="$2"; shift; done
+  mkdir -p "$d/foo-1.0"; : >"$d/foo-1.0/partial"; exit 1
+fi
+exec /usr/bin/tar "$@"'
+# A small archive with a top-level foo-1.0 folder, built with test.sh's own tar.
+mkdir -p "$work/src/foo-1.0/bin"
+printf 'real\n' >"$work/src/foo-1.0/bin/tool"
+
+# ---------------------------------------------------------------- FAIL-01 Linux extract
+fresh_home
+mkdir -p "$work/home/.rea-installer/tools"
+# fetch skips the download when the archive is already in TOOLS_DIR.
+tar -czf "$work/home/.rea-installer/tools/foo-1.0.tar.gz" -C "$work/src" foo-1.0
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'export STUB_TAR=fail; d="$(unpack "https://example.invalid/foo-1.0.tar.gz 00" foo-1.0)"; echo "continued with $d"'
+if [ "$rc" -ne 0 ] && [ ! -e "$work/home/.rea-installer/tools/foo-1.0" ]; then
+  ok "FAIL-01 Linux failed unpack stops and leaves no tool folder"
+else
+  bad "FAIL-01 Linux failed unpack stops and leaves no tool folder"; show
+fi
+# Same HOME: the fixed unpack keeps the verified archive after a failure, so the rerun reuses it.
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'd="$(unpack "https://example.invalid/foo-1.0.tar.gz 00" foo-1.0)"; [ -f "$d/bin/tool" ]'
+if [ "$rc" -eq 0 ]; then ok "FAIL-01 Linux rerun extracts again"; else bad "FAIL-01 Linux rerun extracts again"; show; fi
+
+# ---------------------------------------------------------------- FAIL-02 package install
+fresh_home
+# shellcheck disable=SC2016  # expanded by the stub; real sudo would reset PATH and skip the stubs
+stub sudo 'exec "$@"'
+stub apt-get 'exit 100'
+stub apt-cache 'exit 0'
+stub dpkg-query 'case "$*" in *Status-Abbrev*) echo "ii  base-files" ;; *) exit 1 ;; esac'
+sandbox "$LINUX" 'pm=apt-get; pkg_install curl || die "curl is required."; echo continued'
+if [ "$rc" -ne 0 ] && grep -q 'curl is required' "$work/out" && ! grep -q '^pkg:curl' "$work/home/.rea-installer/installed" 2>/dev/null; then
+  ok "FAIL-02 failed package install stops and is not recorded"
+else
+  bad "FAIL-02 failed package install stops and is not recorded"; show
+fi
+
+# ---------------------------------------------------------------- FAIL-03 brew install
+fresh_home
+# shellcheck disable=SC2016  # expanded by the stub
+stub brew 'case "$1" in list) exit 1 ;; install) echo "Error: no such formula" >&2; exit 1 ;; esac'
+# The || is deliberate: real callers already stop through errexit, so only a direct call can go red.
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'brew_install rea-test-formula || echo "brew_install returned $?"'
+if grep -q 'brew_install returned 1' "$work/out" && grep -qF 'brew install rea-test-formula failed.' "$work/out" &&
+  ! grep -q '^brew:' "$work/home/.rea-installer/installed" 2>/dev/null; then
+  ok "FAIL-03 failed brew install is reported and not recorded"
+else
+  bad "FAIL-03 failed brew install is reported and not recorded"; show
+fi
+
+# ---------------------------------------------------------------- UNIN-01 bash uninstall
+# Each script's sed -i and tac/tail -r only work on its own OS. The ledger pins npm to the stub, and holds
+# only npm: and profile: lines: on a dev Mac load_brew puts the real brew before the stubs.
+unin_home() {
+  fresh_home
+  mkdir -p "$work/home/.agents/skills" "$work/home/.rea-installer" "$(dirname "$1")"
+  printf '#!/bin/sh\nexit 3\n' >"$1"; chmod +x "$1"
+  printf 'keep me\n# >>> rea-installer >>>\nexport X=1\n# <<< rea-installer <<<\n' >"$2"
+  printf 'npm:%s\nprofile:%s\n' "$STUBS/npm" "$2" >"$work/home/.rea-installer/installed"
+}
+unin_check() {
+  if [ "$rc" -eq 0 ] && grep -q 'rea uninstall failed' "$work/out" && printf 'keep me\n' | cmp -s - "$2" &&
+    [ ! -e "$work/home/.rea-installer" ]; then
+    ok "$1"
+  else
+    bad "$1"; show
+  fi
+}
+if [ "$(uname -s)" = Linux ]; then
+  stub npm 'exit 1'
+  unin_home "$work/home/.local/bin/rea" "$work/home/.bashrc"
+  sandbox "$LINUX" 'do_uninstall'
+  unin_check "UNIN-01 Linux uninstall survives a failing rea" "$work/home/.bashrc"
+else
+  skip "UNIN-01 Linux uninstall survives a failing rea (Linux only)"
+fi
+if [ "$(uname -s)" = Darwin ]; then
+  # The macOS script finds rea under "$(npm prefix --global)/bin".
+  # shellcheck disable=SC2016  # expanded by the stub
+  stub npm 'case "$1" in prefix) echo "$HOME/npm-global" ;; *) exit 1 ;; esac'
+  unin_home "$work/home/npm-global/bin/rea" "$work/home/.bash_profile"
+  sandbox "$MACOS" 'do_uninstall'
+  unin_check "UNIN-01 macOS uninstall survives a failing rea" "$work/home/.bash_profile"
+else
+  skip "UNIN-01 macOS uninstall survives a failing rea (macOS only)"
+fi
+# Later checks must not see these; sudo and tar stay.
+rm -f "$STUBS/apt-get" "$STUBS/apt-cache" "$STUBS/dpkg-query" "$STUBS/brew" "$STUBS/npm" "$STUBS/node"
+
 printf '%d passed, %d failed, %d skipped\n' "$pass" "$fail" "$skip"
 [ "$fail" -eq 0 ]
