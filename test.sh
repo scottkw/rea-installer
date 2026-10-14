@@ -514,8 +514,16 @@ $env:JAVA_HOME = Join-Path $Jdks '17'
 $second = @('not run')
 # The second call must print nothing: no false warning, no second winget plan.
 try { Install-Jdk; $second = @(Install-Jdk *>&1) } catch { Write-Host "caught: $_" }
-Report (($env:JAVA_HOME -eq '<Temurin JAVA_HOME>') -and ($second.Count -eq 0) -and -not (Test-Path $StateFile)) 'JAVA-01 Windows Install-Jdk -DryRun sets the placeholder and records nothing'
+Report (($env:JAVA_HOME -eq (Join-Path $Jdks '17')) -and ($second.Count -eq 0) -and -not (Test-Path $StateFile)) 'JAVA-01 Windows Install-Jdk -DryRun leaves JAVA_HOME unchanged and records nothing'
+# The script is dot-sourced, so its script-scope $JdkPlanned lives here and must be reset for later cases.
 $DryRun = $false
+$JdkPlanned = $false
+
+Remove-Item env:REA_TEST_DRY_VAR -ErrorAction SilentlyContinue
+$DryRun = $true
+Set-UserEnv 'REA_TEST_DRY_VAR' 'x' *> $null
+$DryRun = $false
+Report (-not (Test-Path env:REA_TEST_DRY_VAR)) 'JAVA-01 Windows Set-UserEnv -DryRun leaves the session unchanged'
 
 $savedPath = $env:PATH
 $env:JAVA_HOME = ''
@@ -534,6 +542,8 @@ Report ($msg.Contains('java is not on PATH')) 'JAVA-01 Windows Install-Jdk throw
 $env:PATH = $savedPath
 
 # Set-UserEnv runs for real: on Unix pwsh the User-scope write is a silent no-op, and Add-Record writes to $StateFile.
+# The wrong-java and no-java cases already recorded the winget line before they threw, so only a fresh ledger can show this call records it.
+Remove-Item -Force $StateFile -ErrorAction SilentlyContinue
 $savedPath = $env:PATH
 $env:JAVA_HOME = Join-Path $Jdks '17'
 $env:PATH = (Join-Path $Temurin 'bin') + [IO.Path]::PathSeparator + $env:PATH

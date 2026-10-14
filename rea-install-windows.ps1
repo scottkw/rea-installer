@@ -32,6 +32,8 @@ $StateFile = Join-Path $StateDir 'installed'
 $ToolsDir = Join-Path $StateDir 'tools'
 $Package = 'rea-agents'
 $JdkId = 'EclipseAdoptium.Temurin.21.JDK'
+# Set once a dry run has planned the JDK, so the session JAVA_HOME is never used as a marker (WR-03).
+$JdkPlanned = $false
 
 # Not in winget; pinned to the GitHub release digests. JADX is pinned by REA (docs/android-analysis.md).
 $Downloads = @{
@@ -125,8 +127,8 @@ function Set-UserEnv([string]$Name, [string]$Value, [switch]$Replace) {
     }
     if ($existing) { Log "Replacing $Name for your user (was $existing, set by this script earlier)." }
     Write-Host "  > setx $Name `"$Value`""
-    Set-Item "env:$Name" $Value
     if ($DryRun) { return }
+    Set-Item "env:$Name" $Value
     [Environment]::SetEnvironmentVariable($Name, $Value, 'User')
     Add-Record "env:$Name"
 }
@@ -179,13 +181,13 @@ function Expand-PinnedArchive([string]$Key, [string]$Folder) {
 
 # Reuses a JAVA_HOME that is JDK 21+; otherwise installs Temurin 21 and points this session and the user at it.
 function Install-Jdk {
-    if ($env:JAVA_HOME -eq '<Temurin JAVA_HOME>') { return }  # dry-run placeholder from an earlier call this run
+    if ($script:JdkPlanned) { return }
     if (Test-JdkUsable $env:JAVA_HOME) { Log "Using JDK at $env:JAVA_HOME"; return }
     if ($env:JAVA_HOME) {
         Warn "JAVA_HOME points at $env:JAVA_HOME, which is not JDK 21 or newer; installing the script's own JDK 21."
     }
     Install-Winget $JdkId
-    if ($DryRun) { $env:JAVA_HOME = '<Temurin JAVA_HOME>'; return }
+    if ($DryRun) { $script:JdkPlanned = $true; return }
     # Install-Winget skips the PATH refresh when Temurin was already installed.
     Update-SessionPath
     # Derived from PATH, not the MSI's Machine JAVA_HOME, so it works whether or not the MSI set one.
