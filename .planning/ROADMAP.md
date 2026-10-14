@@ -31,10 +31,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `test.sh` contains checks for the FAIL-01, FAIL-02 and DRY-01 behaviors that were run and seen failing against the unfixed scripts, and pass after the fixes
   5. With a `rea` CLI that exits non-zero, `uninstall` on Linux, macOS and Windows prints a warning and still removes every other recorded item (packages, profile block or user variables, `~/.rea-installer`)
 
-**Plans**: 5 plans
+**Plans**: 1/5 plans executed
 Plans:
 **Wave 1**
-- [ ] 01-01-PLAN.md — Walking skeleton: source guard, `test.sh` (static, profile, `node_supported` checks) and GitHub Actions workflow
+- [x] 01-01-PLAN.md — Walking skeleton: source guard, `test.sh` (static, profile, `node_supported` checks) and GitHub Actions workflow
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-02-PLAN.md — Red regression checks (FAIL-01/02/03, DRY-01/02, UNIN-01 on three platforms) and committed `01-RED.log`
@@ -83,6 +83,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Loud Failures, Safe Dry Run, and Regression Tests | 0/5 | Planned | - |
+| 1. Loud Failures, Safe Dry Run, and Regression Tests | 1/5 | In Progress | - |
 | 2. Consistent Java Handling | 0/TBD | Not started | - |
 | 3. macOS Unattended Install and README Sync | 0/TBD | Not started | - |
