@@ -312,6 +312,25 @@ if [ "$(uname -s)" = Darwin ]; then
 else
   skip "JAVA-04 macOS rerun keeps one profile block exporting its own JAVA_HOME (macOS only)"
 fi
+# No existing block below, so no sed -i: these run on every OS. REA_TEST=1 makes sure a block is written at all.
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'export JAVA_HOME="$work/jdks/21.0.5"; install_jdk; profile_exports+=("export REA_TEST=1"); write_profile; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
+if [ "$rc" -eq 0 ] && grep -qF "Using JDK at $work/jdks/21.0.5" "$work/out" && grep -qxF "JAVA_HOME=$work/jdks/21.0.5" "$work/out" &&
+  grep -qx 'export REA_TEST=1' "$work/home/.bash_profile" && ! grep -q '^export JAVA_HOME=' "$work/home/.bash_profile"; then
+  ok "JAVA-03 macOS reused JDK 21 JAVA_HOME is not written to the profile"
+else
+  bad "JAVA-03 macOS reused JDK 21 JAVA_HOME is not written to the profile"; show
+fi
+fresh_home
+mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'export JAVA_HOME="$work/jdks/17"; install_jdk; install_jdk; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
+if [ "$rc" -eq 0 ] && [ "$(grep -c 'which is not JDK 21 or newer' "$work/out")" = 1 ] && grep -qxF "JAVA_HOME=$ours" "$work/out"; then
+  ok "JAVA-02 macOS install_jdk replaces a JDK 17 JAVA_HOME with openjdk@21"
+else
+  bad "JAVA-02 macOS install_jdk replaces a JDK 17 JAVA_HOME with openjdk@21"; show
+fi
 rm -f "$STUBS/brew"
 
 # ---------------------------------------------------------------- DRY-01/02 fresh container

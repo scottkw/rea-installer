@@ -224,13 +224,17 @@ do_install() {
       log "Ghidra already available (left as-is)"
     else
       install_jdk
+      # ghidra depends on openjdk@21; installing it ourselves records it, so uninstall removes it.
+      if [ "${JAVA_HOME:-}" != "$(jdk_home)" ]; then
+        brew_install "$JDK_FORMULA"
+      fi
       brew_install ghidra
     fi
   fi
 
   # 5. Android: JADX needs a full JDK; Apktool and adb are found on PATH.
   if [ "$with_android" = true ]; then
-    [ -n "${JAVA_HOME:-}" ] || install_jdk
+    install_jdk
     install_jadx_jar
     brew_install apktool
     brew_install --cask android-platform-tools
