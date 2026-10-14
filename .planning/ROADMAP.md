@@ -51,7 +51,6 @@ Plans:
 ### Phase 2: Consistent Java Handling
 
 **Goal**: Linux, macOS and Windows all follow one rule (reuse an existing `JAVA_HOME` only if it is JDK 21 or newer, otherwise install and record the script's own JDK) and the script's own `JAVA_HOME` survives reruns
-**Mode:** mvp
 **Depends on**: Phase 1
 **Requirements**: JAVA-01, JAVA-02, JAVA-03, JAVA-04
 **Success Criteria** (what must be TRUE):
