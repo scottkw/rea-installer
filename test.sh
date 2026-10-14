@@ -18,6 +18,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "${work:?}"' EXIT
 STUBS="$work/stubs"
 mkdir -p "$STUBS"
+stub_path="$STUBS:$PATH"
 rc=0
 
 # Writes an executable stub NAME on the sandbox PATH that runs BODY.
@@ -28,7 +29,7 @@ stub() { printf '#!/bin/sh\n%s\n' "$2" >"$STUBS/$1"; chmod +x "$STUBS/$1"; }
 # HOME is exported before sourcing because STATE_DIR, TOOLS_DIR and NPM_PREFIX are computed at source time.
 sandbox() {
   (
-    export HOME="$work/home" PATH="$STUBS:$PATH" SHELL=/bin/bash
+    export HOME="$work/home" PATH="$stub_path" SHELL=/bin/bash
     unset ZDOTDIR
     # shellcheck source=/dev/null
     . "$1"
@@ -230,6 +231,87 @@ else
 fi
 # Later checks must not see these; sudo and tar stay.
 rm -f "$STUBS/apt-get" "$STUBS/apt-cache" "$STUBS/dpkg-query" "$STUBS/brew" "$STUBS/npm" "$STUBS/node"
+
+# ---------------------------------------------------------------- DRY-01/02 fresh container
+# A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.
+# Seeded ~/.rea-installer/node and empty ~/.agents/skills must survive. Two runs, so each gets its own line.
+# The docker CLI keeps the real HOME: it reads ~/.docker for its context.
+if need docker "DRY-01 Linux install --dry-run --with-android in fresh ubuntu:24.04"; then
+  # shellcheck disable=SC2016  # runs inside the container
+  docker run --rm --network none --platform linux/amd64 -v "$root:/src:ro" ubuntu:24.04 bash -c '
+    mkdir -p ~/.rea-installer/node ~/.agents/skills
+    before="$(find ~ | sort)"
+    bash /src/rea-install-linux.sh install --dry-run --with-android >/tmp/i.log 2>&1 || { tail -5 /tmp/i.log; exit 1; }
+    grep -q "npm install --global" /tmp/i.log || { echo "no install plan printed"; exit 1; }
+    [ "$(find ~ | sort)" = "$before" ] || { echo "dry run changed the home folder"; exit 1; }
+  ' >"$work/out" 2>&1
+  rc=$?
+  if [ "$rc" -eq 0 ]; then ok "DRY-01 Linux install --dry-run --with-android in fresh ubuntu:24.04"; else bad "DRY-01 Linux install --dry-run --with-android in fresh ubuntu:24.04"; show; fi
+fi
+if need docker "DRY-02 Linux uninstall --dry-run changes nothing"; then
+  # shellcheck disable=SC2016  # runs inside the container
+  docker run --rm --network none --platform linux/amd64 -v "$root:/src:ro" ubuntu:24.04 bash -c '
+    mkdir -p ~/.rea-installer/node ~/.agents/skills
+    before="$(find ~ | sort)"
+    bash /src/rea-install-linux.sh uninstall --dry-run >/tmp/u.log 2>&1 || { tail -5 /tmp/u.log; exit 1; }
+    [ "$(find ~ | sort)" = "$before" ] || { echo "dry run changed the home folder"; exit 1; }
+    [ -d ~/.agents/skills ] || { echo "~/.agents/skills was removed"; exit 1; }
+  ' >"$work/out" 2>&1
+  rc=$?
+  if [ "$rc" -eq 0 ]; then ok "DRY-02 Linux uninstall --dry-run changes nothing"; else bad "DRY-02 Linux uninstall --dry-run changes nothing"; show; fi
+fi
+
+# ---------------------------------------------------------------- Windows (pwsh)
+# The driver dot-sources the script (no command, so it only defines functions), points its folders into
+# $work, and prints PASS:/FAIL: lines. Stubs first on PATH, so Get-Command rea finds the stub, never a real rea.
+# Driver uses PowerShell 5.1 constructs only: the pwsh 7 parser would accept 7-only syntax.
+if need pwsh "Windows checks (pwsh)"; then
+  mkdir -p "$work/win/tools"
+  tar -czf "$work/win/tools/foo-1.0.tar.gz" -C "$work/src" foo-1.0
+  stub rea 'exit 3'
+  # shellcheck disable=SC2016  # expanded by the stub
+  stub npm 'case "$1" in prefix) echo /nonexistent-npm-prefix ;; *) exit 1 ;; esac'
+  cat >"$work/w.ps1" <<'EOF'
+param([string]$Script, [string]$Work)
+. $Script *> $null
+$ToolsDir = Join-Path $Work 'tools'
+$StateDir = Join-Path $Work 'state'
+$StateFile = Join-Path $StateDir 'installed'
+$Downloads['fake'] = @{ Url = 'https://example.invalid/foo-1.0.tar.gz'; Sha = '00' }
+function Report([bool]$Passed, [string]$Name) { if ($Passed) { "PASS: $Name" } else { "FAIL: $Name" } }
+
+$env:STUB_TAR = 'fail'
+$threw = $false
+try { Expand-PinnedArchive 'fake' 'foo-1.0' | Out-Null } catch { $threw = $true; Write-Host "caught: $_" }
+Report ($threw -and -not (Test-Path (Join-Path $ToolsDir 'foo-1.0'))) 'FAIL-01 Windows failed extract leaves no folder'
+
+$env:STUB_TAR = 'ok'
+$extracted = $false
+try { $t = Expand-PinnedArchive 'fake' 'foo-1.0'; $extracted = Test-Path (Join-Path $t 'bin/tool') } catch { Write-Host "caught: $_" }
+Report $extracted 'FAIL-01 Windows rerun extracts again'
+
+New-Item -ItemType Directory -Force $StateDir | Out-Null
+Set-Content -Path $StateFile -Value 'env:REA_TEST_FAKE_VAR'
+$threw = $false
+try { Invoke-Uninstall *> $null } catch { $threw = $true; Write-Host "caught: $_" }
+Report ((-not $threw) -and -not (Test-Path $StateDir)) 'UNIN-01 Windows uninstall survives a failing rea'
+EOF
+  # Temp HOME so pwsh's caches and the script's default folders never touch the real one.
+  PATH="$stub_path" HOME="$work/pwsh-home" pwsh -NoProfile -File "$work/w.ps1" -Script "$WIN" -Work "$work/win" >"$work/out" 2>&1
+  results=false
+  while IFS= read -r line; do
+    case "$line" in
+      "PASS: "*) ok "${line#PASS: }"; results=true ;;
+      "FAIL: "*) bad "${line#FAIL: }"; results=true ;;
+    esac
+  done <"$work/out"
+  if [ "$results" = false ]; then
+    bad "Windows checks (pwsh driver produced no results)"; show
+  elif grep -q '^FAIL: ' "$work/out"; then
+    grep -v '^PASS: \|^FAIL: ' "$work/out" | sed 's/^/    /'
+  fi
+  rm -f "$STUBS/rea" "$STUBS/npm"
+fi
 
 printf '%d passed, %d failed, %d skipped\n' "$pass" "$fail" "$skip"
 [ "$fail" -eq 0 ]
