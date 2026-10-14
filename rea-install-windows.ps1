@@ -129,13 +129,29 @@ function Get-PinnedFile([string]$Key) {
     return $path
 }
 
-# Extracts an archive into $ToolsDir with Windows' built-in tar (handles .zip and .tar.gz) and returns the new top-level folder.
+# Extracts an archive with Windows' built-in tar (handles .zip and .tar.gz) into a staging folder and renames it
+# only on success, so a failed or interrupted extract never leaves a $Folder a rerun would trust. Returns $ToolsDir\$Folder.
 function Expand-PinnedArchive([string]$Key, [string]$Folder) {
     $target = Join-Path $ToolsDir $Folder
     if (Test-Path $target) { return $target }
     $archive = Get-PinnedFile $Key
-    Invoke-Step tar @('-xf', $archive, '-C', $ToolsDir) | Out-Null  # keep tar output out of the return value
-    if (-not $DryRun) { Remove-Item -Force $archive }
+    $staging = Join-Path $ToolsDir ".staging-$Folder"
+    if ($DryRun) {
+        Write-Host "  > tar -xf $archive -C $staging"
+        return $target
+    }
+    if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
+    New-Item -ItemType Directory -Force $staging | Out-Null
+    try {
+        Invoke-Step tar @('-xf', $archive, '-C', $staging) | Out-Null  # keep tar output out of the return value
+        Move-Item (Join-Path $staging $Folder) $target
+    } catch {
+        # The verified archive is kept so a rerun reuses it.
+        Remove-Item -Recurse -Force $staging -ErrorAction SilentlyContinue
+        throw "Could not unpack $(Split-Path $archive -Leaf): $_"
+    }
+    Remove-Item -Recurse -Force $staging
+    Remove-Item -Force $archive
     return $target
 }
 
@@ -233,7 +249,11 @@ function Invoke-Uninstall {
     if (-not $rea -and $onPath) { $rea = $onPath.Source }
     if ($rea) {
         Log 'Removing REA agent registrations, skills and data'
-        Invoke-Step $rea @('uninstall', '--purge-data')
+        try {
+            Invoke-Step $rea @('uninstall', '--purge-data')
+        } catch {
+            Warn "rea uninstall failed; remove agent registrations by hand. ($_)"
+        }
     } else {
         Warn 'rea CLI not found; skipping agent deregistration.'
     }
