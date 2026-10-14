@@ -12,7 +12,7 @@ This milestone hardens the three existing installer scripts so they never leave 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Loud Failures, Safe Dry Run, and Regression Tests** - Failed extracts/package installs stop loudly, dry runs change nothing, uninstall survives a broken `rea`, all guarded by `test.sh` in CI
+- [x] **Phase 1: Loud Failures, Safe Dry Run, and Regression Tests** - Failed extracts/package installs stop loudly, dry runs change nothing, uninstall survives a broken `rea`, all guarded by `test.sh` in CI (completed 2026-10-14)
 - [ ] **Phase 2: Consistent Java Handling** - Reuse an existing JDK 21+ `JAVA_HOME` on Linux, macOS and Windows, otherwise install and record our own, and keep it across reruns
 - [ ] **Phase 3: macOS Unattended Install and README Sync** - macOS install works without a terminal and under `--yes`; README Status/Testing/Known limitations match the milestone
 
@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `test.sh` contains checks for the FAIL-01, FAIL-02 and DRY-01 behaviors that were run and seen failing against the unfixed scripts, and pass after the fixes
   5. With a `rea` CLI that exits non-zero, `uninstall` on Linux, macOS and Windows prints a warning and still removes every other recorded item (packages, profile block or user variables, `~/.rea-installer`)
 
-**Plans**: 5/5 plans executed
+**Plans**: 5/5 plans complete
 Plans:
 **Wave 1**
 - [x] 01-01-PLAN.md — Walking skeleton: source guard, `test.sh` (static, profile, `node_supported` checks) and GitHub Actions workflow
@@ -83,6 +83,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | In Progress | - |
+| 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | Complete    | 2026-10-14 |
 | 2. Consistent Java Handling | 0/TBD | Not started | - |
 | 3. macOS Unattended Install and README Sync | 0/TBD | Not started | - |

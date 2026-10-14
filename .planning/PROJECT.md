@@ -20,21 +20,22 @@ Installing and uninstalling must never leave the user's machine in a silently br
 - ✓ Install ledger (`~/.rea-installer/installed`) drives uninstall, reversed newest-first; pre-existing tools are left alone — existing
 - ✓ Linux records the dependency set each package pulled in and removes it only when nothing else needs it — existing
 - ✓ Settings persisted via a marked shell-profile block (macOS/Linux) or user environment variables (Windows) — existing
-- ✓ `--dry-run` / `-DryRun` prints the plan — existing (has known violations, see HARD-03, HARD-12)
+- ✓ `--dry-run` / `-DryRun` prints the plan — existing (HARD-03, HARD-12 fixed in Phase 1)
 - ✓ Linux end-to-end install, reinstall and uninstall verified in Ubuntu 24.04, Fedora 44 and Arch containers — existing
+- ✓ Failed archive extraction stops the install and leaves no partial folder (HARD-01) — Phase 1
+- ✓ Failed package installs stop the install and are not recorded (HARD-02) — Phase 1
+- ✓ Linux `--dry-run` succeeds on a fresh machine and changes nothing (HARD-03, HARD-12) — Phase 1
+- ✓ Uninstall completes even when the `rea` CLI is broken (HARD-07) — Phase 1
+- ✓ Repeatable `test.sh`, run locally and in GitHub Actions (HARD-08) — Phase 1
 
 ### Active
 
 <!-- Installer hardening milestone. Source: .planning/AUDIT.md (HARD-01..HARD-12). -->
 
-- [ ] Failed archive extraction stops the install and leaves no partial folder (HARD-01)
-- [ ] Failed package installs stop the install and are not recorded (HARD-02)
-- [ ] Linux `--dry-run` succeeds on a fresh machine and changes nothing (HARD-03, HARD-12)
 - [ ] Windows sets `JAVA_HOME` reliably after installing Temurin (HARD-04)
 - [ ] macOS respects an existing `JAVA_HOME` and keeps its own across reruns (HARD-05, HARD-11)
 - [ ] All platforms reject an existing `JAVA_HOME` older than JDK 21 (HARD-06)
-- [ ] Uninstall completes even when the `rea` CLI is broken (HARD-07)
-- [ ] Repeatable `test.sh`, run locally and in GitHub Actions (HARD-08)
+- [ ] Linux `unpack` fails loudly when an archive's top folder name doesn't match (WR-01, accepted in Phase 1; matters for Phase 2 `install_jdk`)
 - [ ] macOS polish: no-tty `rea setup`, non-interactive Homebrew under `--yes` (HARD-09, HARD-10)
 - [ ] README Status / Testing / Known limitations updated to match each fix
 
@@ -51,7 +52,8 @@ Installing and uninstalling must never leave the user's machine in a silently br
 - Findings source: `.planning/AUDIT.md` (`/ponytail-audit` + `/code-review high`, 2026-10-14). Each HARD item has location, scenario, fix and acceptance check.
 - Root cause behind HARD-01/02: bash turns `set -e` off inside `$(...)` and inside functions called on the left of `||`/`&&` or in an `if`. Verified under bash 3.2.57.
 - README status: Linux tested end to end in containers; macOS and Windows dry runs only.
-- No automated tests or CI exist today.
+- `test.sh` (bash 3.2 and 5, ubuntu:24.04 container, pwsh parse) runs locally and in GitHub Actions on linux and macos (Phase 1).
+- Known limitations accepted in Phase 1: WR-01 (unpack layout mismatch), WR-02 (Rizin/Wakaru trust an existing folder), WR-05 (partial package install records no deps) — see 01-REVIEW-DISPOSITION.md.
 
 ## Constraints
 
@@ -67,7 +69,8 @@ Installing and uninstalling must never leave the user's machine in a silently br
 |----------|-----------|---------|
 | Scope milestone to AUDIT.md HARD-01..12 | Concrete, verified findings with acceptance checks | — Pending |
 | Fix macOS/Windows from code analysis, not real-hardware verification | No real-machine run in this milestone; tracked separately | — Pending |
-| `test.sh` runs locally and in GitHub Actions | Catch regressions on every push, not just before release | — Pending |
+| `test.sh` runs locally and in GitHub Actions | Catch regressions on every push, not just before release | ✓ Good — CI green on both jobs (Phase 1) |
+| Accept WR-01, WR-02, WR-05 as known limitations | UAT decision; fix cost outweighed risk before Phase 2 | — Pending |
 | README kept in sync with each fix | README makes specific status/limitation claims users rely on | — Pending |
 | One "reuse JDK ≥21, else install our own" rule on all platforms | Linux trusts any JAVA_HOME, macOS overrides it — make them consistent | — Pending |
 
@@ -89,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-14 after initialization*
+*Last updated: 2026-10-14 after Phase 1*

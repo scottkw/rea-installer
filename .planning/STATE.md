@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 01
-current_phase_name: Loud Failures, Safe Dry Run, and Regression Tests
-status: verifying
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-10-14T16:52:22.932Z"
+current_phase: 2
+current_phase_name: Consistent Java Handling
+status: planning
+stopped_at: Phase 01 complete, ready to plan Phase 2
+last_updated: "2026-10-14T18:53:01.748Z"
 last_activity: 2026-10-14
-last_activity_desc: Phase 01 execution started
-state_head: f43c7df957e9e096b5778ba11e8bd19872ca3c55
+last_activity_desc: Phase 01 complete, transitioned to Phase 2
+state_head: 320ce8b0af348f272936f1e8bd224e19d792cc99
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
   completed_plans: 5
-  percent: 0
+  percent: 33
 ---
 
 # Project State
@@ -23,21 +23,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** Installing and uninstalling must never leave the user's machine in a silently broken or altered state: a failure stops loudly, a rerun recovers, and uninstall removes only what the script added.
-**Current focus:** Phase 01 — Loud Failures, Safe Dry Run, and Regression Tests
+**Current focus:** Phase 2 — Consistent Java Handling
 
 ## Current Position
 
-Phase: 01 (Loud Failures, Safe Dry Run, and Regression Tests) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-10-14 — Phase 01 execution started
+Phase: 2 — Consistent Java Handling
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-14 — Phase 01 complete, transitioned to Phase 2
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+- Total plans completed: 5
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -45,7 +45,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 5 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -81,6 +81,7 @@ Recent decisions affecting current work:
 - [Phase 01]: Windows Expand-PinnedArchive stages extracts in .staging-<Folder> and keeps the archive on failure, matching Linux
 - [Phase 01]: A failed rea uninstall is a warning with the same text on macOS, Linux and Windows
 - [Phase 01]: Phase 01 CI gate reads the run for the phase code HEAD (770a678); later docs-only tracking commits are outside the gate
+- [Phase 01 UAT]: WR-01, WR-02, WR-05 accepted as known limitations (deferred in 01-REVIEW-DISPOSITION.md)
 
 ### Pending Todos
 
@@ -90,6 +91,8 @@ None yet.
 
 - [Phase 2]: JAVA-01 (HARD-04) rests on an unverified assumption about the Temurin MSI; fix must work whether or not the MSI sets `JAVA_HOME`. Real-Windows confirmation is v2 VERI-02.
 - [Phase 2]: Open audit question: does REA find Ghidra on macOS without `GHIDRA_INSTALL_DIR`?
+- [Phase 2]: WR-01 — Linux `unpack` nests the tool one folder deep if the JDK archive's top folder name differs; `install_jdk` rework should address it.
+- [Phase 3]: WR-07 — macOS `rea setup </dev/tty` dies without a terminal (MAC-01).
 - [All]: No real macOS/Windows runs this milestone; verification is code analysis, dry runs, lint and Linux containers.
 
 ## Deferred Items
@@ -102,6 +105,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T16:52:22.918Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-10-14
+Stopped at: Phase 01 complete, ready to plan Phase 2
 Resume file: None
