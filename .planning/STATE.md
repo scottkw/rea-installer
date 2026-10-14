@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Loud Failures, Safe Dry Run, and Regression Tests
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-10-14T16:27:27.475Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-10-14T16:34:25.544Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 01 execution started
-state_head: 1183787e718e0d946156b81c27389f29dc061f95
+state_head: 6cd7ef52f7c68d0fb22dfb79358a1159761f8c7c
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 ## Current Position
 
 Phase: 01 (Loud Failures, Safe Dry Run, and Regression Tests) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-10-14 — Phase 01 execution started
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 2min | 2 tasks | 4 files |
+| Phase 01 P02 | 3min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [Roadmap]: macOS polish (MAC-01/02) and README sync (DOCS-01) form the final phase; DOCS-01 is verified once against all fixes
 - [Phase 01]: Source guard (return 0 2>/dev/null) && return 0 sits after the main banner in both bash scripts; usage() header ranges unchanged
 - [Phase 01]: test.sh need(): missing tool SKIPs locally, FAILs in CI; docker and shellcheck expected absent on Darwin
+- [Phase 01]: test.sh tar stub is switched by STUB_TAR (fail = partial foo-1.0 then exit 1, else real /usr/bin/tar), shared by bash and pwsh checks
+- [Phase 01]: 01-RED.log committed alone at 3aa4a0e before any installer fix; FAIL-01/02/03 and UNIN-01 checks were shown to go green on scratch-patched copies
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T16:27:27.462Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-10-14T16:34:25.531Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

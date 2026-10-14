@@ -34,8 +34,8 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 - [x] **TEST-01**: Maintainer can run `./test.sh` locally: it runs `shellcheck` and `bash -n` on both bash scripts and parses the PowerShell script (HARD-08)
 - [x] **TEST-02**: `test.sh` verifies that adding then removing the profile block leaves the rest of a sample profile byte-identical (HARD-08)
 - [x] **TEST-03**: `test.sh` verifies `node_supported` accepts/rejects a table of Node versions (22.18 no, 22.19 yes, 24.14 no, 24.15 yes, 26.0 yes) (HARD-08)
-- [ ] **TEST-04**: `test.sh` runs Linux `install --dry-run` in a fresh `ubuntu:24.04` container and expects exit 0 with no changes (HARD-08)
-- [ ] **TEST-05**: `test.sh` includes checks that fail before and pass after the FAIL-01, FAIL-02 and DRY-01 fixes (HARD-08)
+- [x] **TEST-04**: `test.sh` runs Linux `install --dry-run` in a fresh `ubuntu:24.04` container and expects exit 0 with no changes (HARD-08)
+- [x] **TEST-05**: `test.sh` includes checks that fail before and pass after the FAIL-01, FAIL-02 and DRY-01 fixes (HARD-08)
 - [x] **TEST-06**: GitHub Actions runs `test.sh` on every push and pull request (HARD-08)
 
 ### macOS Polish
@@ -85,8 +85,8 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
 | TEST-03 | Phase 1 | Complete |
-| TEST-04 | Phase 1 | Pending |
-| TEST-05 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Complete |
+| TEST-05 | Phase 1 | Complete |
 | TEST-06 | Phase 1 | Complete |
 | MAC-01 | Phase 3 | Pending |
 | MAC-02 | Phase 3 | Pending |
