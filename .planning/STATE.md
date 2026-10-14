@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: consistent-java-handling
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-10-14T20:51:34.226Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-10-14T21:13:01.649Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 2 execution started
-state_head: db2419f9f1a28ee0676f838450ff4677b6d7e778
+state_head: e42bdd0bb05dde48b5cd2da6ce13368758450e2c
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 33
 ---
 
@@ -64,6 +64,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P01 | 2 min | 2 tasks | 3 files |
 | Phase 02 P02 | 3 min | 2 tasks | 2 files |
 | Phase 02 P03 | 3 min | 2 tasks | 2 files |
+| Phase 02 P04 | 7 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 02]: macOS step 4 brew_installs openjdk@21 before ghidra when a user JDK is reused, so Homebrew's ghidra dependency is recorded and uninstall removes it
 - [Phase 02]: Windows Install-Jdk derives JAVA_HOME from the first java on the refreshed PATH, checks it with Test-JdkUsable, sets the session value before Set-UserEnv, and throws (no Machine JAVA_HOME fallback) when it is not JDK 21+
 - [Phase 02]: Windows stale user JAVA_HOME after a Temurin upgrade accepted as a known limitation for DOCS-01; A1/A2 deferred to VERI-02
+- [Phase 02]: macOS rerun restores the script's JAVA_HOME when jdk_owned (ledger brew:openjdk@21 or the block's own export line); a usable user JDK 21+ is still reused and never written
+- [Phase 02]: macOS jdk_home dies on a failing brew --prefix; a dry run without brew plans Homebrew's default prefix with a warning; every caller assigns it in a plain statement
+- [Phase 02]: Linux install_jdk replaces an unusable ~/.rea-installer/jdk on rerun (through run) and refuses an extracted Temurin folder without bin/java or an empty release name
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T19:41:16.677Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-10-14T21:13:01.616Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
