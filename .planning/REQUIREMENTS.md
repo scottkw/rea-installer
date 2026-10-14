@@ -22,8 +22,8 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 
 - [ ] **JAVA-01**: On Windows, after Temurin is installed, `JAVA_HOME` points at Temurin 21 for the session and is saved as a user variable that uninstall removes, whether or not the MSI set it (HARD-04)
 - [ ] **JAVA-02**: On every platform, an existing `JAVA_HOME` is reused only if it is JDK 21 or newer; otherwise the script installs its own JDK (HARD-05, HARD-06)
-- [ ] **JAVA-03**: On macOS, a user's existing JDK ≥21 `JAVA_HOME` is never overwritten in the shell profile (HARD-05)
-- [ ] **JAVA-04**: On macOS, rerunning `install` (with `--with-extras` or `--with-android`) keeps `JAVA_HOME` in the single profile block when it points at the script's own JDK (HARD-11)
+- [x] **JAVA-03**: On macOS, a user's existing JDK ≥21 `JAVA_HOME` is never overwritten in the shell profile (HARD-05)
+- [x] **JAVA-04**: On macOS, rerunning `install` (with `--with-extras` or `--with-android`) keeps `JAVA_HOME` in the single profile block when it points at the script's own JDK (HARD-11)
 
 ### Uninstall
 
@@ -79,8 +79,8 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 | DRY-02 | Phase 1 | Complete |
 | JAVA-01 | Phase 2 | Pending |
 | JAVA-02 | Phase 2 | Pending |
-| JAVA-03 | Phase 2 | Pending |
-| JAVA-04 | Phase 2 | Pending |
+| JAVA-03 | Phase 2 | Complete |
+| JAVA-04 | Phase 2 | Complete |
 | UNIN-01 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |

@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Consistent Java Handling
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-10-14T19:31:01.881Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-10-14T19:35:56.658Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 2 execution started
-state_head: c63d58e2c260942c65dfabbed6ecba47db3b2362
+state_head: 59a75d7caf7514cef8d8863b7a682e22f9d6d647
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 ## Current Position
 
 Phase: 2 (Consistent Java Handling) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-10-14 — Phase 2 execution started
 
@@ -62,6 +62,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 01 P04 | 1m | 2 tasks | 2 files |
 | Phase 01 P05 | 3m | 2 tasks | 0 files |
 | Phase 02 P01 | 2 min | 2 tasks | 3 files |
+| Phase 02 P02 | 3 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 01 UAT]: WR-01, WR-02, WR-05 accepted as known limitations (deferred in 01-REVIEW-DISPOSITION.md)
 - [Phase 02]: jdk_usable (JDK 21+ via java -version, fail closed) shared byte-identical by both bash scripts; Linux install_jdk reuses only a JDK 21+ JAVA_HOME
 - [Phase 02]: Linux post-install jdk_usable self-check dies loudly; java -version output never printed
+- [Phase 02]: macOS write_profile adds JAVA_HOME to the profile block only when it equals jdk_home (the script's own openjdk@21), so a reused user JDK is never written and reruns keep ours
+- [Phase 02]: macOS step 4 brew_installs openjdk@21 before ghidra when a user JDK is reused, so Homebrew's ghidra dependency is recorded and uninstall removes it
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T19:31:01.863Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-10-14T19:35:56.640Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
