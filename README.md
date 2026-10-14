@@ -10,6 +10,7 @@ These scripts collect all of that into one command per platform, and record ever
 
 ## Contents
 
+- [Status](#status)
 - [Quick start](#quick-start)
 - [The three scripts](#the-three-scripts)
 - [What gets installed](#what-gets-installed)
@@ -20,6 +21,16 @@ These scripts collect all of that into one command per platform, and record ever
 - [Known limitations](#known-limitations)
 - [Attribution](#attribution)
 - [License](#license)
+
+## Status
+
+| Script | Status |
+|---|---|
+| Linux | **Tested end to end:** full install, reinstall and uninstall in Ubuntu 24.04, Fedora 44 and Arch Linux containers. Uninstall removed everything it added, except what the system still needed (see [Testing](#testing)). |
+| macOS | **Dry runs only:** lint and dry runs pass, but no real install has been run yet |
+| Windows (x64 and ARM64) | **Dry runs only:** parsed and dry-run with a stubbed `winget`, but never run on real Windows |
+
+For macOS and Windows, run with `--dry-run` / `-DryRun` first and read the plan. If anything goes wrong, please [open an issue](https://github.com/scottkw/rea-installer/issues) with the output.
 
 ## Quick start
 
@@ -176,7 +187,7 @@ Anything that was on your machine before you ran `install` is left alone.
 | Script | Tested on | What was tested |
 |---|---|---|
 | macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. Profile-block removal in a sandboxed home directory. The JADX checksum against the real download. |
-| Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. |
+| Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs as x64 and ARM64 (Ghidra and JADX skipped on ARM64), plus rejection of 32-bit Windows. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. |
 | Linux | Docker containers: Ubuntu 24.04 (x64), Fedora 44 (arm64), Arch Linux (x64) | See below. |
 
 The Linux runs used every option, on a frozen read-only copy of the script, and each went through the same steps:
@@ -187,7 +198,11 @@ The Linux runs used every option, on a frozen read-only copy of the script, and 
    - **Ubuntu and Arch:** zero packages left over and zero pre-existing packages removed.
    - **Fedora:** the test also installed a package that depends on one of sigrok-cli's dependencies. Uninstall correctly kept that dependency. As expected, it also kept systemd, which Fedora protects.
 
-> **Not yet run on a real machine:** a full non-dry install on macOS or Windows (it would change the tester's own agent configuration), and anything involving a Windows `winget` run. Run with `--dry-run` first, and please open an issue if something doesn't work.
+> **Not yet run on a real machine:**
+> - a full install on macOS (it would have changed the tester's own agent configuration);
+> - anything on real Windows, including the `winget` installs, Temurin setting `JAVA_HOME`, WinLibs putting `objdump` on `PATH`, and the registry check that detects ARM64.
+>
+> Run with `--dry-run` first, and please open an issue if something doesn't work.
 
 ## Known limitations
 
