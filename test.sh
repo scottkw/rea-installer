@@ -285,6 +285,35 @@ for script in "$LINUX" "$MACOS"; do
   done
 done
 
+# ---------------------------------------------------------------- JAVA-02/03/04 macOS install_jdk and profile
+# Stub brew: --prefix points under the temp HOME, list says installed so brew_install never installs.
+# Never call load_brew or do_install here: the real brew would come first on PATH.
+# shellcheck disable=SC2016  # expanded by the stub
+stub brew 'case "$1" in --prefix) echo "$HOME/brew/opt/$2" ;; list) exit 0 ;; *) exit 1 ;; esac'
+ours="$work/home/brew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+# The second write runs remove_profile_block, which uses BSD sed -i ''.
+if [ "$(uname -s)" = Darwin ]; then
+  fresh_home
+  mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+  sandbox "$MACOS" 'unset JAVA_HOME; install_jdk; write_profile'
+  rc1=$rc
+  first_warned=false
+  grep -q 'not JDK 21' "$work/out" && first_warned=true
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$MACOS" 'export JAVA_HOME="$(jdk_home)"; write_profile'
+  if [ "$rc1" -eq 0 ] && [ "$rc" -eq 0 ] && [ "$first_warned" = false ] &&
+    [ "$(grep -cx '# >>> rea-installer >>>' "$work/home/.bash_profile")" = 1 ] &&
+    [ "$(grep -c '^export JAVA_HOME=' "$work/home/.bash_profile")" = 1 ] &&
+    grep -qxF "export JAVA_HOME=\"$ours\"" "$work/home/.bash_profile"; then
+    ok "JAVA-04 macOS rerun keeps one profile block exporting its own JAVA_HOME"
+  else
+    bad "JAVA-04 macOS rerun keeps one profile block exporting its own JAVA_HOME"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+  fi
+else
+  skip "JAVA-04 macOS rerun keeps one profile block exporting its own JAVA_HOME (macOS only)"
+fi
+rm -f "$STUBS/brew"
+
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.
 # Seeded ~/.rea-installer/node and empty ~/.agents/skills must survive. Two runs, so each gets its own line.

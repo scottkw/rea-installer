@@ -131,12 +131,23 @@ remove_profile_block() {
 
 # ---------------------------------------------------------------- install
 
+# The opt path stays valid across brew upgrade, and brew --prefix prints it even before the formula is installed.
+jdk_home() { printf '%s/libexec/openjdk.jdk/Contents/Home' "$(brew --prefix "$JDK_FORMULA")"; }
+
 install_jdk() {
+  local ours
+  ours="$(jdk_home)"
+  if [ "${JAVA_HOME:-}" != "$ours" ]; then
+    if jdk_usable "${JAVA_HOME:-}"; then
+      log "Using JDK at $JAVA_HOME"
+      return
+    fi
+    [ -z "${JAVA_HOME:-}" ] || warn "JAVA_HOME points at $JAVA_HOME, which is not JDK 21 or newer; installing the script's own JDK 21."
+  fi
   brew_install "$JDK_FORMULA"
   # REA validates the JDK via JAVA_HOME; setup copies it into agent registrations.
-  export JAVA_HOME
-  JAVA_HOME="$(brew --prefix "$JDK_FORMULA")/libexec/openjdk.jdk/Contents/Home"
-  profile_exports+=("export JAVA_HOME=\"$JAVA_HOME\"")
+  export JAVA_HOME="$ours"
+  [ "$dry_run" = true ] || jdk_usable "$ours" || die "Homebrew $JDK_FORMULA at $ours does not run."
 }
 
 install_jadx_jar() {
@@ -155,6 +166,25 @@ install_jadx_jar() {
     fi
   fi
   export REA_JADX_MCP_JAR="$JADX_JAR"
+}
+
+write_profile() {
+  # Only the script's own JDK goes in the block: a reused user JAVA_HOME is never written (JAVA-03), and a rerun that skips install_jdk keeps ours (JAVA-04).
+  if [ -n "${JAVA_HOME:-}" ] && [ "$JAVA_HOME" = "$(jdk_home)" ]; then
+    profile_exports+=("export JAVA_HOME=\"$JAVA_HOME\"")
+  fi
+  if ((${#profile_exports[@]} > 0)); then
+    local profile
+    profile="$(profile_file)"
+    log "Adding REA settings to $profile"
+    remove_profile_block "$profile"
+    if [ "$dry_run" = true ]; then
+      printf '    %s\n' "$PROFILE_BEGIN" "${profile_exports[@]}" "$PROFILE_END"
+    else
+      printf '%s\n' "$PROFILE_BEGIN" "${profile_exports[@]}" "$PROFILE_END" >>"$profile"
+    fi
+    record "profile:$profile"
+  fi
 }
 
 do_install() {
@@ -216,18 +246,7 @@ do_install() {
   fi
 
   # 7. Shell profile: setup does not copy objdump/WABT settings into agent registrations.
-  if ((${#profile_exports[@]} > 0)); then
-    local profile
-    profile="$(profile_file)"
-    log "Adding REA settings to $profile"
-    remove_profile_block "$profile"
-    if [ "$dry_run" = true ]; then
-      printf '    %s\n' "$PROFILE_BEGIN" "${profile_exports[@]}" "$PROFILE_END"
-    else
-      printf '%s\n' "$PROFILE_BEGIN" "${profile_exports[@]}" "$PROFILE_END" >>"$profile"
-    fi
-    record "profile:$profile"
-  fi
+  write_profile
 
   # 8. REA CLI
   log "Installing $PACKAGE"
