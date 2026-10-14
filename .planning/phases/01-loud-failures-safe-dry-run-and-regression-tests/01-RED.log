@@ -1,0 +1,95 @@
+# ./test.sh on Darwin arm64, bash 3.2.57(1)-release, 2026-10-14T16:33:27Z, commit 3c96f26
+PASS: TEST-01 bash -n rea-install-linux.sh
+PASS: TEST-01 bash -n rea-install-macos.sh
+PASS: TEST-01 shellcheck rea-install-linux.sh
+PASS: TEST-01 shellcheck rea-install-macos.sh
+PASS: TEST-01 shellcheck test.sh
+PASS: TEST-01 pwsh parse rea-install-windows.ps1
+SKIP: TEST-02 profile round trip (rea-install-linux.sh) (Linux only)
+PASS: TEST-02 profile round trip (rea-install-macos.sh)
+PASS: TEST-03 node_supported 22.18.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 22.19.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 24.14.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 24.15.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 26.0.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 22.18.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 22.19.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 24.14.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 24.15.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 26.0.0 (rea-install-macos.sh)
+PASS: GUARD piped into bash runs main (rea-install-linux.sh)
+PASS: GUARD sourced skips main (rea-install-linux.sh)
+PASS: GUARD piped into bash runs main (rea-install-macos.sh)
+PASS: GUARD sourced skips main (rea-install-macos.sh)
+FAIL: FAIL-01 Linux failed unpack stops and leaves no tool folder
+      $ tar -xzf /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/home/.rea-installer/tools/foo-1.0.tar.gz -C /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/home/.rea-installer/tools
+    continued with /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/home/.rea-installer/tools/foo-1.0
+FAIL: FAIL-01 Linux rerun extracts again
+FAIL: FAIL-02 failed package install stops and is not recorded
+      $ sudo_cmd apt-get update -qq
+      $ sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl
+    continued
+FAIL: FAIL-03 failed brew install is reported and not recorded
+      $ brew install rea-test-formula
+    Error: no such formula
+SKIP: UNIN-01 Linux uninstall survives a failing rea (Linux only)
+FAIL: UNIN-01 macOS uninstall survives a failing rea
+    ==> Removing REA agent registrations, skills and data
+      $ /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/home/npm-global/bin/rea uninstall --purge-data
+FAIL: DRY-01 Linux install --dry-run --with-android in fresh ubuntu:24.04
+      $ sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl
+    ==> procps already installed (left as-is)
+      $ sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unzip
+      $ sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xz-utils
+    /src/rea-install-linux.sh: line 294: curl: command not found
+FAIL: DRY-02 Linux uninstall --dry-run changes nothing
+    dry run changed the home folder
+FAIL: FAIL-01 Windows failed extract leaves no folder
+FAIL: FAIL-01 Windows rerun extracts again
+FAIL: UNIN-01 Windows uninstall survives a failing rea
+      > tar -xf /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/win/tools/foo-1.0.tar.gz -C /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/win/tools
+    caught: tar -xf /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/win/tools/foo-1.0.tar.gz -C /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/win/tools failed with exit code 1
+    caught: /var/folders/lb/2__vrh3n2n155kwhrvz08lv80000gn/T/tmp.FG4oRhsEdD/stubs/rea uninstall --purge-data failed with exit code 3
+21 passed, 10 failed, 2 skipped
+# ubuntu:24.04 container run (Linux-only checks)
+PASS: TEST-01 bash -n rea-install-linux.sh
+PASS: TEST-01 bash -n rea-install-macos.sh
+SKIP: TEST-01 shellcheck rea-install-linux.sh (shellcheck not found)
+SKIP: TEST-01 shellcheck rea-install-macos.sh (shellcheck not found)
+SKIP: TEST-01 shellcheck test.sh (shellcheck not found)
+SKIP: TEST-01 pwsh parse rea-install-windows.ps1 (pwsh not found)
+PASS: TEST-02 profile round trip (rea-install-linux.sh)
+SKIP: TEST-02 profile round trip (rea-install-macos.sh) (macOS only)
+PASS: TEST-03 node_supported 22.18.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 22.19.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 24.14.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 24.15.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 26.0.0 (rea-install-linux.sh)
+PASS: TEST-03 node_supported 22.18.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 22.19.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 24.14.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 24.15.0 (rea-install-macos.sh)
+PASS: TEST-03 node_supported 26.0.0 (rea-install-macos.sh)
+PASS: GUARD piped into bash runs main (rea-install-linux.sh)
+PASS: GUARD sourced skips main (rea-install-linux.sh)
+PASS: GUARD piped into bash runs main (rea-install-macos.sh)
+PASS: GUARD sourced skips main (rea-install-macos.sh)
+FAIL: FAIL-01 Linux failed unpack stops and leaves no tool folder
+      $ tar -xzf /tmp/tmp.9eOAY0rQrZ/home/.rea-installer/tools/foo-1.0.tar.gz -C /tmp/tmp.9eOAY0rQrZ/home/.rea-installer/tools
+    continued with /tmp/tmp.9eOAY0rQrZ/home/.rea-installer/tools/foo-1.0
+FAIL: FAIL-01 Linux rerun extracts again
+FAIL: FAIL-02 failed package install stops and is not recorded
+      $ sudo_cmd apt-get update -qq
+      $ sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl
+    continued
+FAIL: FAIL-03 failed brew install is reported and not recorded
+      $ brew install rea-test-formula
+    Error: no such formula
+FAIL: UNIN-01 Linux uninstall survives a failing rea
+    ==> Removing REA agent registrations, skills and data
+      $ /tmp/tmp.9eOAY0rQrZ/home/.local/bin/rea uninstall --purge-data
+SKIP: UNIN-01 macOS uninstall survives a failing rea (macOS only)
+SKIP: DRY-01 Linux install --dry-run --with-android in fresh ubuntu:24.04 (docker not found)
+SKIP: DRY-02 Linux uninstall --dry-run changes nothing (docker not found)
+SKIP: Windows checks (pwsh) (pwsh not found)
+17 passed, 5 failed, 9 skipped
