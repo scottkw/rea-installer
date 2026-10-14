@@ -360,7 +360,28 @@ if [ "$rc" -eq 0 ] && [ "$(grep -c 'which is not JDK 21 or newer' "$work/out")" 
 else
   bad "JAVA-02 macOS install_jdk replaces a JDK 17 JAVA_HOME with openjdk@21"; show
 fi
+# A failing brew --prefix must stop a real run, never yield a path that starts with /libexec (WR-07).
+stub brew 'exit 1'
+fresh_home
+sandbox "$MACOS" 'unset JAVA_HOME; install_jdk; echo continued'
+if [ "$rc" -ne 0 ] && grep -qF 'brew --prefix failed' "$work/out" && ! grep -qx continued "$work/out" &&
+  ! grep -qE '(^|[ "=])/libexec/' "$work/out"; then
+  ok "JAVA-02 macOS install_jdk stops when brew cannot locate openjdk@21"
+else
+  bad "JAVA-02 macOS install_jdk stops when brew cannot locate openjdk@21"; show
+fi
 rm -f "$STUBS/brew" "$STUBS/ghidraRun"
+# A dry run on a Mac without Homebrew plans the default prefix. The PATH leaves out any real brew.
+case "$(uname -m)" in arm64) p=/opt/homebrew ;; *) p=/usr/local ;; esac
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; dry_run=true; unset JAVA_HOME; install_jdk; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
+if [ "$rc" -eq 0 ] && grep -qF 'brew not found; the dry-run plan assumes' "$work/out" &&
+  grep -qxF "JAVA_HOME=$p/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" "$work/out"; then
+  ok "JAVA-02 macOS dry run without brew plans the default Homebrew JDK path"
+else
+  bad "JAVA-02 macOS dry run without brew plans the default Homebrew JDK path"; show
+fi
 
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.

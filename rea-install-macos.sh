@@ -132,7 +132,24 @@ remove_profile_block() {
 # ---------------------------------------------------------------- install
 
 # The opt path stays valid across brew upgrade, and brew --prefix prints it even before the formula is installed.
-jdk_home() { printf '%s/libexec/openjdk.jdk/Contents/Home' "$(brew --prefix "$JDK_FORMULA")"; }
+# Callers capture this with $(...), so they must use a plain assignment: only that lets set -e stop the run on die.
+jdk_home() {
+  local prefix="" have_brew=false
+  command -v brew >/dev/null 2>&1 && have_brew=true
+  if [ "$have_brew" = true ]; then
+    prefix="$(brew --prefix "$JDK_FORMULA")" || prefix=""
+  fi
+  if [ -z "$prefix" ]; then
+    # A dry run on a Mac without Homebrew only plans step 2's install, so assume where it would put the formula.
+    if [ "$dry_run" = true ] && [ "$have_brew" = false ]; then
+      if [ "$(uname -m)" = arm64 ]; then prefix="/opt/homebrew/opt/$JDK_FORMULA"; else prefix="/usr/local/opt/$JDK_FORMULA"; fi
+      warn "brew not found; the dry-run plan assumes Homebrew's default prefix $prefix."
+    else
+      die "could not locate Homebrew's $JDK_FORMULA (brew --prefix failed)."
+    fi
+  fi
+  printf '%s/libexec/openjdk.jdk/Contents/Home' "$prefix"
+}
 
 # Ownership comes from what the script installed, not the caller's environment, so a rerun from a shell that never sourced the block keeps our JAVA_HOME (JAVA-04).
 jdk_owned() {
@@ -193,8 +210,12 @@ install_ghidra() {
 
 write_profile() {
   # Only the script's own JDK goes in the block: a reused user JAVA_HOME is never written (JAVA-03), and a rerun that skips install_jdk keeps ours (JAVA-04).
-  if [ -n "${JAVA_HOME:-}" ] && [ "$JAVA_HOME" = "$(jdk_home)" ]; then
-    profile_exports+=("export JAVA_HOME=\"$JAVA_HOME\"")
+  if [ -n "${JAVA_HOME:-}" ]; then
+    local ours
+    ours="$(jdk_home)"
+    if [ "$JAVA_HOME" = "$ours" ]; then
+      profile_exports+=("export JAVA_HOME=\"$JAVA_HOME\"")
+    fi
   fi
   if ((${#profile_exports[@]} > 0)); then
     local profile
