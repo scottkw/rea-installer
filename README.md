@@ -19,6 +19,7 @@ These scripts collect all of that into one command per platform, and record ever
 - [Testing](#testing)
 - [Known limitations](#known-limitations)
 - [Attribution](#attribution)
+- [License](#license)
 
 ## Quick start
 
@@ -239,3 +240,9 @@ These scripts only install other people's work. All credit belongs to the projec
 | [procps-ng](https://gitlab.com/procps-ng/procps), [util-linux](https://github.com/util-linux/util-linux) | Their respective maintainers | GPL-2.0+ / mixed |
 
 Product names and trademarks belong to their owners. If you maintain one of these projects and would like the attribution changed, please open an issue.
+
+## License
+
+The scripts and documentation in this repository are released under the [MIT License](LICENSE).
+
+That license covers only this repository. Each tool the scripts install keeps its own license, listed under [Attribution](#attribution).
