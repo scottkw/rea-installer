@@ -5,11 +5,11 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "`unpack` hides archive-layout mismatches by moving the whole staging folder"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "Rizin and Wakaru now trust a partial folder left by an earlier failed run"
   - id: WR-03
     severity: warning
@@ -21,7 +21,7 @@ findings:
     title: "`pkg_install` still swallows a failing `pkg_list`, which can corrupt the ledger"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "A failed package or brew install records nothing, leaving partial changes uninstall cannot remove"
   - id: WR-06
     severity: warning
@@ -47,7 +47,7 @@ findings:
     severity: info
     disposition: open
     title: "Uninstall removes `~/.agents` without a ledger entry"
-open: 11
+open: 8
 total: 11
 recorded: 2026-10-14T16:59:33.309Z
 ---
@@ -56,11 +56,11 @@ recorded: 2026-10-14T16:59:33.309Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| WR-01 | warning | deferred | accepted as known limitation in UAT test 2 (2026-10-14) |
+| WR-02 | warning | deferred | accepted as known limitation in UAT test 2 (2026-10-14) |
 | WR-03 | warning | open | - |
 | WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
+| WR-05 | warning | deferred | accepted as known limitation in UAT test 2 (2026-10-14) |
 | WR-06 | warning | open | - |
 | WR-07 | warning | open | - |
 | IN-01 | info | open | - |
