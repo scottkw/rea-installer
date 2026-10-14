@@ -16,7 +16,12 @@ covered_files:
   - "test.sh"
 covered_digest: "v3:sha256:acc1b3a30249895b2b21c2c2796bddf50083adf5a8e0d8bc1cd4b1e65299a663"
 behavior_unverified: 0
-overrides_applied: 0
+overrides_applied: 1
+overrides:
+  - must_have: "With JAVA_HOME pointing at JDK 21 or newer, it reuses the existing one and installs no JDK"
+    reason: "On macOS, Homebrew's ghidra formula depends on openjdk@21, so installing Ghidra pulls in a JDK regardless; the script reuses the user's JAVA_HOME, writes no JAVA_HOME line, and records openjdk@21 so uninstall removes it. Holds literally with --no-ghidra or when Ghidra is already present."
+    accepted_by: "Ken Scott"
+    accepted_at: "2026-10-14T20:30:00Z"
 gaps:
   - truth: "ROADMAP SC3 / 02-02 truth 1 (JAVA-04): on macOS, two `install --with-extras` (or `--with-android`) runs in a row leave exactly one profile block that still exports JAVA_HOME pointing at the script's openjdk@21"
     status: partial
