@@ -134,6 +134,11 @@ remove_profile_block() {
 # The opt path stays valid across brew upgrade, and brew --prefix prints it even before the formula is installed.
 jdk_home() { printf '%s/libexec/openjdk.jdk/Contents/Home' "$(brew --prefix "$JDK_FORMULA")"; }
 
+# Ownership comes from what the script installed, not the caller's environment, so a rerun from a shell that never sourced the block keeps our JAVA_HOME (JAVA-04).
+jdk_owned() {
+  grep -qxF "brew:$JDK_FORMULA" "$STATE_FILE" 2>/dev/null || grep -qxF "export JAVA_HOME=\"$1\"" "$(profile_file)" 2>/dev/null
+}
+
 install_jdk() {
   local ours
   ours="$(jdk_home)"
@@ -166,6 +171,24 @@ install_jadx_jar() {
     fi
   fi
   export REA_JADX_MCP_JAR="$JADX_JAR"
+}
+
+install_ghidra() {
+  local ours
+  ours="$(jdk_home)"
+  if command -v ghidraRun >/dev/null 2>&1 || [ -n "${GHIDRA_INSTALL_DIR:-}" ]; then
+    log "Ghidra already available (left as-is)"
+    if jdk_owned "$ours"; then
+      install_jdk
+    fi
+  else
+    install_jdk
+    # ghidra depends on openjdk@21; installing it ourselves records it, so uninstall removes it.
+    if [ "${JAVA_HOME:-}" != "$ours" ]; then
+      brew_install "$JDK_FORMULA"
+    fi
+    brew_install ghidra
+  fi
 }
 
 write_profile() {
@@ -220,16 +243,7 @@ do_install() {
 
   # 4. Ghidra (free native-analysis engine) + its JDK
   if [ "$with_ghidra" = true ]; then
-    if command -v ghidraRun >/dev/null 2>&1 || [ -n "${GHIDRA_INSTALL_DIR:-}" ]; then
-      log "Ghidra already available (left as-is)"
-    else
-      install_jdk
-      # ghidra depends on openjdk@21; installing it ourselves records it, so uninstall removes it.
-      if [ "${JAVA_HOME:-}" != "$(jdk_home)" ]; then
-        brew_install "$JDK_FORMULA"
-      fi
-      brew_install ghidra
-    fi
+    install_ghidra
   fi
 
   # 5. Android: JADX needs a full JDK; Apktool and adb are found on PATH.

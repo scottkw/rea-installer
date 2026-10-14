@@ -293,18 +293,21 @@ done
 # Never call load_brew or do_install here: the real brew would come first on PATH.
 # shellcheck disable=SC2016  # expanded by the stub
 stub brew 'case "$1" in --prefix) echo "$HOME/brew/opt/$2" ;; list) exit 0 ;; *) exit 1 ;; esac'
+# Ghidra already on PATH: install_ghidra takes its "already available" branch, as on a rerun.
+stub ghidraRun 'exit 0'
 ours="$work/home/brew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
 # The second write runs remove_profile_block, which uses BSD sed -i ''.
 if [ "$(uname -s)" = Darwin ]; then
   fresh_home
   mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
-  sandbox "$MACOS" 'unset JAVA_HOME; install_jdk; write_profile'
+  # Both runs queue an export, as --with-extras does: without one, write_profile leaves the old block alone.
+  sandbox "$MACOS" 'unset JAVA_HOME; install_jdk; profile_exports+=("export REA_TEST=1"); write_profile'
   rc1=$rc
   first_warned=false
   grep -q 'not JDK 21' "$work/out" && first_warned=true
-  # shellcheck disable=SC2016  # expanded inside the sandbox
-  sandbox "$MACOS" 'export JAVA_HOME="$(jdk_home)"; write_profile'
-  if [ "$rc1" -eq 0 ] && [ "$rc" -eq 0 ] && [ "$first_warned" = false ] &&
+  # The second run's shell never sourced the block: JAVA_HOME is unset, as in the same terminal as run 1.
+  sandbox "$MACOS" 'unset JAVA_HOME; install_ghidra; profile_exports+=("export REA_TEST=1"); write_profile'
+  if [ "$rc1" -eq 0 ] && [ "$rc" -eq 0 ] && [ "$first_warned" = false ] && ! grep -q 'not JDK 21' "$work/out" &&
     [ "$(grep -cx '# >>> rea-installer >>>' "$work/home/.bash_profile")" = 1 ] &&
     [ "$(grep -c '^export JAVA_HOME=' "$work/home/.bash_profile")" = 1 ] &&
     grep -qxF "export JAVA_HOME=\"$ours\"" "$work/home/.bash_profile"; then
@@ -316,6 +319,29 @@ else
   skip "JAVA-04 macOS rerun keeps one profile block exporting its own JAVA_HOME (macOS only)"
 fi
 # No existing block below, so no sed -i: these run on every OS. REA_TEST=1 makes sure a block is written at all.
+# A rerun after a failed run: the ledger owns openjdk@21 but no block was written yet.
+fresh_home
+mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+mkdir -p "$work/home/.rea-installer"
+printf 'brew:openjdk@21\n' >"$work/home/.rea-installer/installed"
+sandbox "$MACOS" 'unset JAVA_HOME; install_ghidra; write_profile'
+if [ "$rc" -eq 0 ] && [ "$(grep -cxF "export JAVA_HOME=\"$ours\"" "$work/home/.bash_profile" 2>/dev/null)" = 1 ]; then
+  ok "JAVA-04 macOS rerun with JAVA_HOME unset restores its own JAVA_HOME from the ledger"
+else
+  bad "JAVA-04 macOS rerun with JAVA_HOME unset restores its own JAVA_HOME from the ledger"; show
+fi
+# Same ledger, but a usable user JDK: owning openjdk@21 must not override it (JAVA-03).
+fresh_home
+mkdir -p "$work/home/.rea-installer"
+printf 'brew:openjdk@21\n' >"$work/home/.rea-installer/installed"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'export JAVA_HOME="$work/jdks/21.0.5"; install_ghidra; profile_exports+=("export REA_TEST=1"); write_profile'
+if [ "$rc" -eq 0 ] && grep -qF "Using JDK at $work/jdks/21.0.5" "$work/out" &&
+  grep -qx 'export REA_TEST=1' "$work/home/.bash_profile" && ! grep -q '^export JAVA_HOME=' "$work/home/.bash_profile"; then
+  ok "JAVA-03 macOS rerun reuses a JDK 21 JAVA_HOME even when it owns openjdk@21"
+else
+  bad "JAVA-03 macOS rerun reuses a JDK 21 JAVA_HOME even when it owns openjdk@21"; show
+fi
 fresh_home
 # shellcheck disable=SC2016  # expanded inside the sandbox
 sandbox "$MACOS" 'export JAVA_HOME="$work/jdks/21.0.5"; install_jdk; profile_exports+=("export REA_TEST=1"); write_profile; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
@@ -334,7 +360,7 @@ if [ "$rc" -eq 0 ] && [ "$(grep -c 'which is not JDK 21 or newer' "$work/out")" 
 else
   bad "JAVA-02 macOS install_jdk replaces a JDK 17 JAVA_HOME with openjdk@21"; show
 fi
-rm -f "$STUBS/brew"
+rm -f "$STUBS/brew" "$STUBS/ghidraRun"
 
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.
