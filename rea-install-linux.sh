@@ -170,10 +170,10 @@ pkg_install() {
   case "$pm" in
     apt-get)
       # noninteractive: tshark otherwise stops to ask about non-root capture.
-      run sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$name"
+      run sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$name" || return 1
       ;;
-    dnf) run sudo_cmd dnf install -y -q "$name" ;;
-    pacman) run sudo_cmd pacman -S --needed --noconfirm "$name" ;;
+    dnf) run sudo_cmd dnf install -y -q "$name" || return 1 ;;
+    pacman) run sudo_cmd pacman -S --needed --noconfirm "$name" || return 1 ;;
   esac
   added="$(comm -13 <(printf '%s\n' "$before") <(pkg_list) | grep -vxF "$name" | tr '\n' ' ')"
   record "pkg:$name ${added% }"
@@ -235,16 +235,24 @@ fetch() {
   printf '%s\n' "$path"
 }
 
-# Usage: unpack "url sha256" DIR -> extracts into $TOOLS_DIR (unless DIR exists) and prints $TOOLS_DIR/DIR.
+# Usage: unpack "url sha256" DIR -> extracts into $TOOLS_DIR/DIR (unless it exists) and prints that path.
+# DIR is the archive's top-level folder, or the folder its files go into when it has none (Rizin, Wakaru).
+# Extracts into a staging folder and renames it only on success, so a failed or interrupted extract never
+# leaves a DIR that a rerun would trust. Always called inside $(...), where set -e is off: check each step.
 unpack() {
-  local target="$TOOLS_DIR/$2" archive
+  local target="$TOOLS_DIR/$2" staging="$TOOLS_DIR/.staging-$2" archive src
   if [ ! -d "$target" ]; then
-    archive="$(fetch "$1")"
+    archive="$(fetch "$1")" || exit 1
+    run rm -rf "$staging" >&2
+    run mkdir -p "$staging" >&2 || die "could not create $staging."
     case "$archive" in
-      *.zip) run unzip -q "$archive" -d "$TOOLS_DIR" >&2 ;;
-      *) run tar -xzf "$archive" -C "$TOOLS_DIR" >&2 ;;
-    esac
-    [ "$dry_run" = true ] || rm -f "$archive"
+      *.zip) run unzip -q "$archive" -d "$staging" >&2 ;;
+      *) run tar -xf "$archive" -C "$staging" >&2 ;;
+    esac || { run rm -rf "$staging" >&2; die "could not unpack $(basename "$archive")."; }
+    src="$staging"
+    [ -d "$staging/$2" ] && src="$staging/$2"
+    run mv "$src" "$target" >&2 || { run rm -rf "$staging" >&2; die "could not move $2 into place."; }
+    run rm -rf "$staging" "$archive" >&2
   fi
   printf '%s\n' "$target"
 }
@@ -325,9 +333,9 @@ make_venv() {
   local name="$1" uv_dir
   shift
   if [ "$(arch)" = arm64 ]; then
-    uv_dir="$(unpack "$UV_arm64" uv-aarch64-unknown-linux-gnu)"
+    uv_dir="$(unpack "$UV_arm64" uv-aarch64-unknown-linux-gnu)" || return 1
   else
-    uv_dir="$(unpack "$UV_x64" uv-x86_64-unknown-linux-gnu)"
+    uv_dir="$(unpack "$UV_x64" uv-x86_64-unknown-linux-gnu)" || return 1
   fi
   export UV_PYTHON_INSTALL_DIR="$STATE_DIR/python" UV_CACHE_DIR="$STATE_DIR/uv-cache"
   if [ ! -x "$STATE_DIR/venvs/$name/bin/python" ]; then
@@ -397,26 +405,21 @@ do_install() {
       chmod +x "$launcher"
     fi
     setting REA_APKTOOL_COMMAND "$launcher"
-    pkg_install adb || true
+    pkg_install adb || warn "adb could not be installed; skipping it."
   fi
 
   # 5. Offline tools: Rizin and objdump are found on PATH; REA only offers WASM tools when this is set.
   if [ "$with_extras" = true ]; then
     if ! pkg_install rizin; then
       if [ "$(arch)" = x64 ]; then
-        local rizin_dir="$TOOLS_DIR/rizin-0.9.1" rizin_tar
-        if [ ! -x "$rizin_dir/bin/rizin" ]; then
-          rizin_tar="$(fetch "$RIZIN_x64")"
-          run mkdir -p "$rizin_dir"
-          run tar -xJf "$rizin_tar" -C "$rizin_dir"
-          [ "$dry_run" = true ] || rm -f "$rizin_tar"
-        fi
+        local rizin_dir
+        rizin_dir="$(unpack "$RIZIN_x64" rizin-0.9.1)"
         setting REA_RIZIN_COMMAND "$rizin_dir/bin/rizin"
       else
         warn "no rizin build for this distribution and architecture; skipping it."
       fi
     fi
-    pkg_install binutils || true
+    pkg_install binutils || warn "binutils could not be installed; skipping it."
     local wabt="$WABT_x64" wabt_dir
     [ "$(arch)" = arm64 ] && wabt="$WABT_arm64"
     wabt_dir="$(unpack "$wabt" wabt-1.0.42)"
@@ -425,9 +428,9 @@ do_install() {
 
   # 6. Linux-only tools. REA's MCP server only offers these when given absolute paths.
   if [ "$with_linux_tools" = true ]; then
-    pkg_install tshark || true
-    pkg_install sigrok-cli || true
-    pkg_install gdb || true
+    pkg_install tshark || warn "tshark could not be installed; skipping it."
+    pkg_install sigrok-cli || warn "sigrok-cli could not be installed; skipping it."
+    pkg_install gdb || warn "gdb could not be installed; skipping it."
     tool_setting REA_TSHARK_COMMAND tshark
     tool_setting REA_CAPINFOS_COMMAND capinfos
     tool_setting REA_SIGROK_COMMAND sigrok-cli
@@ -437,13 +440,8 @@ do_install() {
       else
         warn "pwntools could not be installed; skipping it."
       fi
-      local wakaru_dir="$TOOLS_DIR/wakaru-1.14.0" wakaru_tgz
-      if [ ! -x "$wakaru_dir/wakaru" ]; then
-        wakaru_tgz="$(fetch "$WAKARU_x64")"
-        run mkdir -p "$wakaru_dir"
-        run tar -xzf "$wakaru_tgz" -C "$wakaru_dir"
-        [ "$dry_run" = true ] || rm -f "$wakaru_tgz"
-      fi
+      local wakaru_dir
+      wakaru_dir="$(unpack "$WAKARU_x64" wakaru-1.14.0)"
       setting REA_WAKARU_COMMAND "$wakaru_dir/wakaru"
     else
       warn "skipping pwntools and Wakaru (REA supports them on Linux x64 only)."
