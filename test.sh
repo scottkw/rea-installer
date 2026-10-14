@@ -407,6 +407,44 @@ $threw = $false
 try { Invoke-Uninstall *> $null } catch { $threw = $true; Write-Host "caught: $_" }
 Report ((-not $threw) -and -not (Test-Path $StateDir)) 'UNIN-01 Windows uninstall survives a failing rea'
 
+# Same rows as the bash jdk_usable table.
+$rows = @('8:False', '17:False', '21:True', '21.0.5:True', '25-ea:True', 'picked-up:True', 'garbage:False',
+          'exit1:False', 'missing:False', 'empty:False')
+foreach ($row in $rows) {
+    $label, $want = $row -split ':', 2
+    $dir = if ($label -eq 'empty') { '' } else { Join-Path $Jdks $label }
+    Report ((Test-JdkUsable $dir) -eq [bool]::Parse($want)) "JAVA-02 Windows Test-JdkUsable $label"
+}
+Report ($ErrorActionPreference -eq 'Stop') 'JAVA-02 Windows Test-JdkUsable keeps ErrorActionPreference'
+
+$env:JAVA_HOME = Join-Path $Jdks '21.0.5'
+try { Install-Jdk } catch { Write-Host "caught: $_" }
+Report (($env:JAVA_HOME -eq (Join-Path $Jdks '21.0.5')) -and -not (Test-Path $StateFile)) 'JAVA-02 Windows Install-Jdk reuses a JDK 21 JAVA_HOME'
+
+$DryRun = $true
+$env:JAVA_HOME = Join-Path $Jdks '17'
+$second = @('not run')
+# The second call must print nothing: no false warning, no second winget plan.
+try { Install-Jdk; $second = @(Install-Jdk *>&1) } catch { Write-Host "caught: $_" }
+Report (($env:JAVA_HOME -eq '<Temurin JAVA_HOME>') -and ($second.Count -eq 0) -and -not (Test-Path $StateFile)) 'JAVA-01 Windows Install-Jdk -DryRun sets the placeholder and records nothing'
+$DryRun = $false
+
+$savedPath = $env:PATH
+$env:JAVA_HOME = ''
+$env:PATH = (Join-Path (Join-Path $Jdks '17') 'bin') + [IO.Path]::PathSeparator + $env:PATH
+$msg = ''
+try { Install-Jdk } catch { $msg = "$_" }
+Report ($msg.Contains((Join-Path $Jdks '17'))) 'JAVA-01 Windows Install-Jdk throws when the java on PATH is not JDK 21+'
+$env:PATH = $savedPath
+
+$env:JAVA_HOME = ''
+# Only the stub folder: pwsh 7 puts its own folder first on PATH, so the first entry is not it.
+$env:PATH = Split-Path (Get-Command winget -CommandType Application).Source
+$msg = ''
+try { Install-Jdk } catch { $msg = "$_" }
+Report ($msg.Contains('java is not on PATH')) 'JAVA-01 Windows Install-Jdk throws when no java is on PATH'
+$env:PATH = $savedPath
+
 # Set-UserEnv runs for real: on Unix pwsh the User-scope write is a silent no-op, and Add-Record writes to $StateFile.
 $savedPath = $env:PATH
 $env:JAVA_HOME = Join-Path $Jdks '17'
