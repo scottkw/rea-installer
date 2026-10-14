@@ -288,6 +288,45 @@ for script in "$LINUX" "$MACOS"; do
   done
 done
 
+# A broken ~/.rea-installer/jdk is replaced on rerun (WR-09). fetch and unpack reuse the pre-seeded tools folder,
+# so nothing is downloaded. The node stub prints "link sha release" as install_jdk reads it. It drains stdin
+# first: exiting unread makes the curl stub die of SIGPIPE, and pipefail then stops install_jdk silently.
+stub curl 'echo "[]"'
+stub node 'cat >/dev/null; echo https://example.invalid/OpenJDK21U-jdk.tar.gz 00 jdk-21.0.5+11'
+fresh_home
+mkjdk "$work/home/.rea-installer/jdk" "echo 'openjdk version \"21.0.5\"' >&2; exit 1"
+sandbox "$LINUX" 'dry_run=true; unset JAVA_HOME; install_jdk'
+if [ "$rc" -eq 0 ] && grep -qF 'does not run; downloading it again.' "$work/out" &&
+  grep -qF "rm -rf $work/home/.rea-installer/jdk" "$work/out" && [ "$(grep -c 'Would download Temurin 21' "$work/out")" = 1 ] &&
+  [ -e "$work/home/.rea-installer/jdk/bin/java" ]; then
+  ok "JAVA-02 Linux install_jdk plans to replace a broken ~/.rea-installer/jdk"
+else
+  bad "JAVA-02 Linux install_jdk plans to replace a broken ~/.rea-installer/jdk"; show
+fi
+fresh_home
+mkjdk "$work/home/.rea-installer/jdk" "echo 'openjdk version \"21.0.5\"' >&2; exit 1"
+mkjdk "$work/home/.rea-installer/tools/jdk-21.0.5+11" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+cp "$work/jdks/17/bin/java" "$work/java17.ref"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'export JAVA_HOME="$work/jdks/17"; install_jdk; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
+if [ "$rc" -eq 0 ] && grep -qxF "JAVA_HOME=$work/home/.rea-installer/jdk" "$work/out" &&
+  "$work/home/.rea-installer/jdk/bin/java" -version 2>/dev/null && cmp -s "$work/jdks/17/bin/java" "$work/java17.ref"; then
+  ok "JAVA-02 Linux install_jdk replaces a broken ~/.rea-installer/jdk on rerun"
+else
+  bad "JAVA-02 Linux install_jdk replaces a broken ~/.rea-installer/jdk on rerun"; show
+fi
+# An archive whose bin/java sits one level deeper (the accepted unpack layout limitation) never becomes the trusted JDK.
+fresh_home
+mkjdk "$work/home/.rea-installer/tools/jdk-21.0.5+11/nested" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+sandbox "$LINUX" 'unset JAVA_HOME; install_jdk; echo continued'
+if [ "$rc" -ne 0 ] && grep -qF 'has no bin/java' "$work/out" && ! grep -qx continued "$work/out" &&
+  [ ! -e "$work/home/.rea-installer/jdk" ] && [ ! -e "$work/home/.rea-installer/tools/jdk-21.0.5+11" ]; then
+  ok "JAVA-02 Linux install_jdk stops on a Temurin archive without bin/java"
+else
+  bad "JAVA-02 Linux install_jdk stops on a Temurin archive without bin/java"; show
+fi
+rm -f "$STUBS/curl" "$STUBS/node"
+
 # ---------------------------------------------------------------- JAVA-02/03/04 macOS install_jdk and profile
 # Stub brew: --prefix points under the temp HOME, list says installed so brew_install never installs.
 # Never call load_brew or do_install here: the real brew would come first on PATH.

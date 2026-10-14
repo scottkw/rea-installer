@@ -337,15 +337,31 @@ install_jdk() {
     return
   fi
   [ -z "${JAVA_HOME:-}" ] || warn "JAVA_HOME points at $JAVA_HOME, which is not JDK 21 or newer; installing the script's own JDK 21."
-  if [ ! -d "$STATE_DIR/jdk" ] && [ "$dry_run" = true ]; then
+  local fetch_jdk=false
+  if [ ! -d "$STATE_DIR/jdk" ]; then
+    fetch_jdk=true
+  elif ! jdk_usable "$STATE_DIR/jdk"; then
+    # Only the script's own folder is replaced, so a rerun recovers from a broken earlier download.
+    warn "the JDK at $STATE_DIR/jdk does not run; downloading it again."
+    run rm -rf "$STATE_DIR/jdk"
+    fetch_jdk=true
+  fi
+  if [ "$fetch_jdk" = true ] && [ "$dry_run" = true ]; then
     log "Would download Temurin 21 into $STATE_DIR/jdk"
-  elif [ ! -d "$STATE_DIR/jdk" ]; then
+  elif [ "$fetch_jdk" = true ]; then
     local meta
     meta="$(curl -fsSL --proto '=https' "https://api.adoptium.net/v3/assets/latest/21/hotspot?architecture=$(arch | sed s/arm64/aarch64/)&image_type=jdk&os=linux&vendor=eclipse" |
       node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>{const a=JSON.parse(s)[0];console.log(a.binary.package.link,a.binary.package.checksum,a.release_name)})')"
     local link sha release dir
     read -r link sha release <<<"$meta"
+    # An empty release would make dir $TOOLS_DIR itself, which the bin/java check below would then remove.
+    [ -n "$release" ] || die "could not read the Temurin 21 release from Adoptium."
     dir="$(unpack "$link $sha" "$release")"
+    # A layout unpack did not expect (bin/java one level deeper) must not become the trusted JDK.
+    if [ ! -x "$dir/bin/java" ]; then
+      run rm -rf "$dir"
+      die "the Temurin archive has no bin/java under $dir; rerun to download it again."
+    fi
     run mv "$dir" "$STATE_DIR/jdk"
   fi
   [ "$dry_run" = true ] || jdk_usable "$STATE_DIR/jdk" || die "the downloaded JDK at $STATE_DIR/jdk does not run."
