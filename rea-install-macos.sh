@@ -88,6 +88,17 @@ node_supported() {
   ((major == 22 && minor >= 19 || major == 24 && minor >= 15 || major >= 26))
 }
 
+# Ghidra 12 and REA need JDK 21+. Reads `java -version` (stderr); a JAVA_TOOL_OPTIONS "Picked up" line may come first.
+jdk_usable() {
+  local out major re='version "([0-9]+)(\.([0-9]+))?'
+  [ -n "$1" ] && [ -x "$1/bin/java" ] || return 1
+  out="$("$1/bin/java" -version 2>&1)" || return 1
+  [[ "$out" =~ $re ]] || return 1
+  major="${BASH_REMATCH[1]}"
+  [ "$major" = 1 ] && major="${BASH_REMATCH[3]:-0}" # "1.8.0_402" -> 8
+  ((major >= 21))
+}
+
 profile_file() {
   case "$(basename "${SHELL:-}")" in
     zsh) printf '%s/.zshrc' "${ZDOTDIR:-$HOME}" ;;

@@ -259,6 +259,31 @@ if [ "$rc" -eq 0 ] && grep -qF "Using JDK at $work/jdks/21.0.5" "$work/out" && g
 else
   bad "JAVA-02 Linux install_jdk reuses a JDK 21 JAVA_HOME"; show
 fi
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'dry_run=true; unset JAVA_HOME; install_jdk; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
+if [ "$rc" -eq 0 ] && grep -qxF "JAVA_HOME=$work/home/.rea-installer/jdk" "$work/out" &&
+  [ "$(grep -c 'Would download Temurin 21' "$work/out")" = 1 ] && ! grep -q 'not JDK 21' "$work/out"; then
+  ok "JAVA-02 Linux install_jdk with no JAVA_HOME installs its own without a warning"
+else
+  bad "JAVA-02 Linux install_jdk with no JAVA_HOME installs its own without a warning"; show
+fi
+
+# jdk_usable on every java -version shape real JDKs print (stderr only), in both bash scripts.
+mkjdk "$work/jdks/8" "echo 'openjdk version \"1.8.0_402\"' >&2"
+mkjdk "$work/jdks/21" "echo 'openjdk version \"21\" 2023-09-19' >&2"
+mkjdk "$work/jdks/25-ea" "echo 'openjdk version \"25-ea\" 2025-09-16' >&2"
+mkjdk "$work/jdks/picked-up" "echo 'Picked up JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8' >&2; echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+mkjdk "$work/jdks/garbage" 'echo hello >&2'
+mkjdk "$work/jdks/exit1" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2; exit 1"
+for script in "$LINUX" "$MACOS"; do
+  name="$(basename "$script")"
+  for row in 8:1 17:1 21:0 21.0.5:0 25-ea:0 picked-up:0 garbage:1 exit1:1 missing:1 empty:1; do
+    label="${row%%:*}" dir="$work/jdks/${row%%:*}"
+    [ "$label" = empty ] && dir=""
+    sandbox "$script" "jdk_usable \"$dir\""
+    if [ "$rc" = "${row#*:}" ]; then ok "JAVA-02 jdk_usable $label ($name)"; else bad "JAVA-02 jdk_usable $label ($name)"; show; fi
+  done
+done
 
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.
@@ -271,6 +296,8 @@ if need docker "DRY-01 Linux install --dry-run --with-android in fresh ubuntu:24
     before="$(find ~ | sort)"
     bash /src/rea-install-linux.sh install --dry-run --with-android >/tmp/i.log 2>&1 || { tail -5 /tmp/i.log; exit 1; }
     grep -q "npm install --global" /tmp/i.log || { echo "no install plan printed"; exit 1; }
+    [ "$(grep -c "Would download Temurin 21" /tmp/i.log)" = 1 ] || { echo "JAVA-02: JDK planned more than once"; exit 1; }
+    ! grep -q "not JDK 21 or newer" /tmp/i.log || { echo "JAVA-02: false JAVA_HOME warning"; exit 1; }
     [ "$(find ~ | sort)" = "$before" ] || { echo "dry run changed the home folder"; exit 1; }
   ' >"$work/out" 2>&1
   rc=$?
