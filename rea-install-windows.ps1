@@ -1,11 +1,13 @@
 <#
-Install or uninstall REA (https://github.com/morluto/rea) and its dependencies on Windows x64.
+Install or uninstall REA (https://github.com/morluto/rea) and its dependencies on Windows x64 or ARM64.
 
   .\rea-install-windows.ps1 install   [-NoGhidra] [-WithAndroid] [-WithExtras] [-Yes] [-DryRun]
   .\rea-install-windows.ps1 uninstall [-Yes] [-DryRun]
 
   -WithAndroid  JADX headless jar, Apktool, adb (APK decompilation, resources, devices)
   -WithExtras   Rizin, GNU objdump (WinLibs toolchain, ~250 MB), WABT (offline native and WASM analysis)
+
+On ARM64, Ghidra and JADX are skipped: REA's Windows support for them is x64-only.
 
 If scripts are blocked, run:  powershell -ExecutionPolicy Bypass -File .\rea-install-windows.ps1 install
 
@@ -149,9 +151,12 @@ function Install-Jdk {
 }
 
 function Invoke-Install {
-    if (-not [Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64') {
-        throw 'REA on Windows (Ghidra and JADX) supports x64 only.'
-    }
+    # The machine's architecture, not this process's: PowerShell may itself run under x64 emulation on ARM64.
+    $hostArch = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
+    if ($hostArch -notin @('AMD64', 'ARM64')) { throw "REA needs 64-bit Windows (x64 or ARM64); this is $hostArch." }
+    # REA's Windows native controls, which Ghidra and JADX require, ship for x64 only.
+    $isArm64 = $hostArch -eq 'ARM64'
+    if ($isArm64) { Warn 'Windows on ARM64: Ghidra and JADX are skipped because REA supports them on Windows x64 only.' }
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         throw 'winget is required. Install "App Installer" from the Microsoft Store, then rerun.'
     }
@@ -169,16 +174,19 @@ function Invoke-Install {
     if (-not $NoGhidra) {
         if ($env:GHIDRA_INSTALL_DIR) {
             Log "Ghidra already configured at $env:GHIDRA_INSTALL_DIR (left as-is)"
+        } elseif ($isArm64) {
+            Log 'Skipping Ghidra (x64 only)'
         } else {
             Install-Jdk
             Set-UserEnv 'GHIDRA_INSTALL_DIR' (Expand-PinnedArchive 'ghidra' 'ghidra_12.1.4_PUBLIC')
         }
     }
 
-    # 3. Android: JADX needs a full JDK; adb is found on PATH; REA runs Apktool through a .bat launcher.
+    # 3. Android: JADX and Apktool need a JDK; adb is found on PATH; REA runs Apktool through a .bat launcher.
     if ($WithAndroid) {
         Install-Jdk
-        Set-UserEnv 'REA_JADX_MCP_JAR' (Get-PinnedFile 'jadx')
+        if ($isArm64) { Log 'Skipping JADX (x64 only)' }
+        else { Set-UserEnv 'REA_JADX_MCP_JAR' (Get-PinnedFile 'jadx') }
         $jar = Get-PinnedFile 'apktool'
         $launcher = Join-Path $ToolsDir 'apktool.bat'
         Write-Host "  > write $launcher"
@@ -206,6 +214,7 @@ function Invoke-Install {
     else { Invoke-Step $rea @('setup') }
 
     Log "Done. Open a new terminal, restart your agent(s), then check health with: $rea doctor"
+    if ($isArm64) { Log "On ARM64, 'rea doctor' reports the host as unsupported: REA's Windows support targets x64." }
 }
 
 # ---------------------------------------------------------------- uninstall
@@ -267,5 +276,5 @@ function Invoke-Uninstall {
 switch ($Command) {
     'install' { Invoke-Install }
     'uninstall' { Invoke-Uninstall }
-    default { Get-Content $PSCommandPath -TotalCount 13 | Select-Object -Skip 1 | Write-Host }
+    default { Get-Content $PSCommandPath -TotalCount 15 | Select-Object -Skip 1 | Write-Host }
 }

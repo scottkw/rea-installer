@@ -54,7 +54,7 @@ Every script accepts `--dry-run` (`-DryRun` on Windows), which prints each comma
 | Script | Platform | Language | Package source |
 |---|---|---|---|
 | [`rea-install-macos.sh`](rea-install-macos.sh) | macOS (Apple silicon and Intel) | Bash 3.2 (the macOS default) | Homebrew |
-| [`rea-install-windows.ps1`](rea-install-windows.ps1) | Windows 10+ x64 | Windows PowerShell 5.1 / PowerShell 7 | winget, plus pinned GitHub downloads |
+| [`rea-install-windows.ps1`](rea-install-windows.ps1) | Windows 10+ x64 or ARM64 | Windows PowerShell 5.1 / PowerShell 7 | winget, plus pinned GitHub downloads |
 | [`rea-install-linux.sh`](rea-install-linux.sh) | Linux x64 and arm64 (apt, dnf, pacman) | Bash | Distribution packages, plus pinned downloads into your home directory |
 
 All three do the same job in the same order:
@@ -73,12 +73,12 @@ REA needs Node.js 22.19+, 24.11+ or 26+. The scripts require 24.15+ on the 24.x 
 |---|---|---|---|---|
 | Node.js + npm | Running REA | Homebrew `node` if needed | winget `OpenJS.NodeJS.LTS` if needed | nodejs.org 24.x tarball if needed |
 | REA (`rea-agents`) | Everything | ✓ npm | ✓ npm | ✓ npm (`~/.local` prefix) |
-| Ghidra 12.1.4 | Native binary analysis | ✓ Homebrew `ghidra` | ✓ GitHub release | ✓ GitHub release (x64 only) |
+| Ghidra 12.1.4 | Native binary analysis | ✓ Homebrew `ghidra` | ✓ GitHub release (x64 only) | ✓ GitHub release (x64 only) |
 | JDK 21 | Ghidra, JADX | ✓ Homebrew `openjdk@21` | ✓ winget Temurin 21 | ✓ Adoptium Temurin 21 |
 | Hopper | Native binary analysis (commercial) | offered by `rea setup` | — | offered by `rea setup` |
 | Xcode Command Line Tools | Homebrew; REA's macOS process capture | ✓ if missing | — | — |
 | procps `ps`, util-linux `prlimit`, curl, unzip, xz | REA's Linux process supervision, downloads | — | — | ✓ if missing |
-| JADX headless 0.7.1 jar | Android APK decompilation | `--with-android` | `-WithAndroid` | `--with-android` |
+| JADX headless 0.7.1 jar | Android APK decompilation | `--with-android` | `-WithAndroid` (x64 only) | `--with-android` |
 | Apktool 3.0.3 | Android resources and manifests | `--with-android` | `-WithAndroid` | `--with-android` |
 | adb (platform-tools) | Android devices and emulators | `--with-android` | `-WithAndroid` | `--with-android` |
 | Rizin | Offline native analysis | `--with-extras` | `-WithExtras` | `--with-extras` (distro package, or the official static build on x64) |
@@ -191,7 +191,8 @@ The Linux runs used every option, on a frozen read-only copy of the script, and 
 
 ## Known limitations
 
-- **Windows:** REA's Ghidra support there is experimental (read-only, Windows executables and DLLs only), and Ghidra and JADX are x64-only. Hopper and process capture aren't available on Windows. Node.js and Temurin install machine-wide, so you'll see a UAC prompt.
+- **Windows:** REA's Ghidra support there is experimental (read-only, Windows executables and DLLs only). Hopper and process capture aren't available on Windows. Node.js and Temurin install machine-wide, so you'll see a UAC prompt.
+- **Windows on ARM64:** REA's Windows native code, which Ghidra and JADX need, ships for x64 only, so the script skips those two and installs everything else. Node.js runs natively. The JDK, adb, Rizin, WinLibs and WABT have no ARM64 builds, so they run under Windows' built-in x64 emulation. `rea doctor` reports an ARM64 host as unsupported, because REA's Windows support targets x64.
 - **Linux arm64:** Ghidra's official release has no arm64 Linux decompiler, so Ghidra is skipped. REA supports pwntools and Wakaru only on x64.
 - **Not installed:**
   - Binwalk 3.1: no prebuilt binaries, only a Rust source build.
