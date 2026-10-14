@@ -81,7 +81,7 @@ blocked: 2
       issue: "write_profile JAVA_HOME clause (~211-219) depends on $JAVA_HOME; jdk_owned used only at ~193-200"
     - path: "test.sh"
       issue: "no --no-ghidra rerun case"
-    missing:
+  missing:
     - "write_profile decides from jdk_owned (ledger brew:openjdk@21 or block export) plus jdk_usable user check, not from the caller environment"
     - "test: --no-ghidra --with-extras rerun with JAVA_HOME unset keeps our export"
   debug_session: "02-REVIEW.md (reproduced by gsd-code-reviewer)"
@@ -92,13 +92,13 @@ blocked: 2
   reason: "User reported: Go with your recommendation on any of these. (decision: fix WR-01)"
   severity: major
   test: 2
-  root_cause: "Install-Jdk passes -Replace:$owned, where $owned is true whenever the ledger has env:JAVA_HOME, so Set-UserEnv replaces any current user value, and its message says "set by this script earlier" (02-REVIEW.md WR-01, reproduced)"
+  root_cause: "Install-Jdk passes -Replace:$owned, where $owned is true whenever the ledger has env:JAVA_HOME, so Set-UserEnv replaces any current user value, and its message says 'set by this script earlier' (02-REVIEW.md WR-01, reproduced)"
   artifacts:
     - path: "rea-install-windows.ps1"
       issue: "Install-Jdk ~200-202 and Set-UserEnv ~121-134 message at ~128"
     - path: "test.sh"
       issue: "CR-01 case covers only a dead saved value"
-    missing:
+  missing:
     - "replace only when owned AND the saved value is not an existing folder (Test-Path)"
     - "accurate log text for the replace"
     - "test: owned ledger + existing user JDK keeps the user value"
@@ -116,7 +116,7 @@ blocked: 2
       issue: "Install-Winget"
     - path: "test.sh"
       issue: "Update-SessionPath stub ~473"
-    missing:
+  missing:
     - "`if ($DryRun) { return }` after Invoke-Step in Install-Winget"
     - "stub sets $script:PathRefreshed; assert it stays $false after the dry-run Install-Jdk case"
   debug_session: "02-REVIEW.md (reproduced by gsd-code-reviewer)"
@@ -137,7 +137,7 @@ blocked: 2
       issue: "missing empty-release guard test (IN-05)"
     - path: ".planning/phases/02-consistent-java-handling/02-REVIEW-DISPOSITION.md"
       issue: "open rows; dropped accepted rows"
-    missing:
+  missing:
     - "WR-04: move a nested bin/java dir into place; die message must not promise a rerun recovers"
     - "IN-03: check ledger/ghidraRun before calling jdk_home"
     - "IN-04: include java -version output (head -3) in the die"
