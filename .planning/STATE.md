@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Consistent Java Handling
-status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-10-14T19:35:56.658Z"
+status: verifying
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-10-14T19:41:16.696Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 2 execution started
-state_head: 59a75d7caf7514cef8d8863b7a682e22f9d6d647
+state_head: 929161ec4fda67b11f475037865aceba6966aeab
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 
 Phase: 2 (Consistent Java Handling) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-14 — Phase 2 execution started
 
 Progress: [███░░░░░░░] 33%
@@ -63,6 +63,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 01 P05 | 3m | 2 tasks | 0 files |
 | Phase 02 P01 | 2 min | 2 tasks | 3 files |
 | Phase 02 P02 | 3 min | 2 tasks | 2 files |
+| Phase 02 P03 | 3 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Linux post-install jdk_usable self-check dies loudly; java -version output never printed
 - [Phase 02]: macOS write_profile adds JAVA_HOME to the profile block only when it equals jdk_home (the script's own openjdk@21), so a reused user JDK is never written and reruns keep ours
 - [Phase 02]: macOS step 4 brew_installs openjdk@21 before ghidra when a user JDK is reused, so Homebrew's ghidra dependency is recorded and uninstall removes it
+- [Phase 02]: Windows Install-Jdk derives JAVA_HOME from the first java on the refreshed PATH, checks it with Test-JdkUsable, sets the session value before Set-UserEnv, and throws (no Machine JAVA_HOME fallback) when it is not JDK 21+
+- [Phase 02]: Windows stale user JAVA_HOME after a Temurin upgrade accepted as a known limitation for DOCS-01; A1/A2 deferred to VERI-02
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T19:35:56.640Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-10-14T19:41:16.677Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

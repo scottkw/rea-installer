@@ -60,7 +60,7 @@ Plans:
   3. On macOS, two `install --with-extras` (or `--with-android`) runs in a row leave exactly one profile block that still exports `JAVA_HOME` pointing at the script's `openjdk@21`
   4. On Windows, after Temurin is installed, `JAVA_HOME` is set for the session to the Temurin 21 folder (derived from the `java` now on PATH) and saved as a user variable that `uninstall` removes, whether or not the MSI set it; confirmed by code review and the `test.sh` PowerShell parse, with real-Windows confirmation deferred to VERI-02
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 Plans:
 **Wave 1**
 - [x] 02-01-PLAN.md — Linux tracer: `jdk_usable` (both bash scripts), Linux `install_jdk` reuses only JDK 21+, predicate table and single-JDK dry-run checks
@@ -69,7 +69,7 @@ Plans:
 - [x] 02-02-PLAN.md — macOS: `jdk_home`, reworked `install_jdk`, `write_profile` keeps our `JAVA_HOME` across reruns and never writes a user's; Ghidra's `openjdk@21` recorded
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 02-03-PLAN.md — Windows: `Test-JdkUsable`, `Install-Jdk` derives `JAVA_HOME` from the installed Temurin and saves it as a recorded user variable; pwsh driver checks
+- [x] 02-03-PLAN.md — Windows: `Test-JdkUsable`, `Install-Jdk` derives `JAVA_HOME` from the installed Temurin and saves it as a recorded user variable; pwsh driver checks
 
 **Notes**: HARD-04 rests on an unverified assumption about the Temurin MSI's `FeatureJavaHome` default; the fix must work either way. Audit open question worth checking here: whether REA finds Ghidra on macOS without `GHIDRA_INSTALL_DIR` (Homebrew cask install; script never sets it). The macOS JDK decision line (`[ -n "$JAVA_HOME" ] || install_jdk`) is touched by both FAIL-03 (Phase 1) and this phase.
 
@@ -94,5 +94,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | Complete    | 2026-10-14 |
-| 2. Consistent Java Handling | 2/3 | In Progress | - |
+| 2. Consistent Java Handling | 3/3 | In Progress | - |
 | 3. macOS Unattended Install and README Sync | 0/TBD | Not started | - |
