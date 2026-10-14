@@ -86,8 +86,8 @@ REA needs Node.js 22.19+, 24.11+ or 26+. The scripts require 24.15+ on the 24.x 
 | TShark + capinfos | Packet captures | — | — | `--with-linux-tools` |
 | sigrok-cli | Logic-analyser recordings | — | — | `--with-linux-tools` |
 | GDB | Debugger sessions | — | — | `--with-linux-tools` |
-| pwntools 4.15.0 (+ pyelftools 0.33, Unicorn 2.1.2) | ELF layout, recorded crashes | — | — | `--with-linux-tools` (x64, isolated venv) |
-| mitmproxy 12.2.3 | Native mitmproxy captures | — | — | `--with-linux-tools` (isolated venv, Python 3.12+) |
+| pwntools 4.15.0 (+ pyelftools 0.33, Unicorn 2.1.2) | ELF layout, recorded crashes | — | — | `--with-linux-tools` (x64; private Python 3.12 venv via uv) |
+| mitmproxy 12.2.3 | Native mitmproxy captures | — | — | `--with-linux-tools` (private Python 3.12 venv via uv) |
 | Wakaru 1.14.0 | JavaScript bundle recovery | — | — | `--with-linux-tools` (x64) |
 
 A Chrome-family browser, which REA uses for website analysis, is left for you to install. Neither is anything commercial: IDA, JEB, and Hopper on Windows.
@@ -131,7 +131,9 @@ Uninstall reads `~/.rea-installer/installed` and reverses it, newest first:
 1. Runs `rea uninstall --purge-data`, REA's own command. It removes REA's agent registrations, its skill files and `~/.rea`.
 2. Removes the `rea-agents` npm package.
 3. Removes the shell-profile block (macOS and Linux) or the user environment variables (Windows).
-4. Removes packages the script installed. It never removes one that something else now depends on: it checks with `brew uses`, a simulated `apt-get`/`dnf` removal, or `pacman`'s reverse dependencies. On Linux it also removes only the dependencies that its own removals left orphaned.
+4. Removes packages the script installed.
+   - **macOS:** it skips a formula that something else now depends on (checked with `brew uses`).
+   - **Linux:** at install time it records each package together with every dependency that package pulled in. At uninstall it first simulates removing that exact set. If the simulation would also remove anything else (meaning you've since installed something that relies on it), it keeps the whole set and warns. Otherwise it purges the set.
 5. Asks before removing Hopper, Homebrew or the Xcode Command Line Tools, and only if this script's run installed them.
 6. Deletes `~/.rea-installer`, which holds every downloaded tool, JDK, Node.js and Python venv.
 
@@ -152,7 +154,7 @@ Anything that was on your machine before you ran `install` is left alone.
 
 | Download | Checksum source |
 |---|---|
-| Ghidra, Apktool, WABT, Rizin | GitHub release asset digests, pinned in the scripts |
+| Ghidra, Apktool, WABT, Rizin, uv | GitHub release asset digests, pinned in the scripts |
 | JADX jar, Wakaru | REA's documentation |
 | Node.js | nodejs.org's `SHASUMS256.txt` |
 | Temurin JDK | The checksum Adoptium's API publishes |
@@ -161,6 +163,8 @@ Anything that was on your machine before you ran `install` is left alone.
 - Rerunning `install` doesn't download what's already present.
 - It doesn't add a second profile block; the block is replaced.
 - It recognises its own previous settings instead of mistaking them for yours.
+
+**Keep the system Python out of it.** pwntools and mitmproxy go into private virtual environments with a Python 3.12 that [uv](https://github.com/astral-sh/uv) downloads into `~/.rea-installer`. REA pins Unicorn 2.1.2, which has no wheels past Python 3.13, and mitmproxy 12 needs 3.12+. With a private interpreter, the result doesn't depend on which Python your distribution ships. uv itself is pinned by checksum, to a release that had been out for over two weeks.
 
 **Fail loudly.** All three scripts run in strict mode: `set -euo pipefail` in bash, `Set-StrictMode` and `$ErrorActionPreference = 'Stop'` in PowerShell. When an optional tool isn't available, the script warns and skips it. When a required step fails, it stops with a message saying what to do.
 
@@ -172,7 +176,15 @@ Anything that was on your machine before you ran `install` is left alone.
 |---|---|---|
 | macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. Profile-block removal in a sandboxed home directory. The JADX checksum against the real download. |
 | Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. |
-| Linux | Docker container: Fedora 44 (arm64) | A full install with every option. Each configured tool run at its pinned version. `rea doctor` (healthy). A reinstall from a shell with the profile loaded (no downloads, one profile block). Uninstall, then a before-and-after comparison of the installed package list. Ubuntu 24.04 (x64) and Arch Linux (x64) runs are in progress. |
+| Linux | Docker containers: Ubuntu 24.04 (x64), Fedora 44 (arm64), Arch Linux (x64) | See below. |
+
+The Linux runs used every option, on a frozen read-only copy of the script, and each went through the same steps:
+
+1. **Install,** then run each configured tool at its pinned version and run `rea doctor`. All three were healthy, and on x64 REA detected Ghidra 12.1.4 and JADX.
+2. **Reinstall** from a shell with the profile block loaded. Nothing was downloaded again, there was still one profile block, and every setting was kept.
+3. **Uninstall,** then compare the installed-package list with the one from before the install:
+   - **Ubuntu and Arch:** zero packages left over and zero pre-existing packages removed.
+   - **Fedora:** the test also installed a package that depends on one of sigrok-cli's dependencies. Uninstall correctly kept that dependency. As expected, it also kept systemd, which Fedora protects.
 
 > **Not yet run on a real machine:** a full non-dry install on macOS or Windows (it would change the tester's own agent configuration), and anything involving a Windows `winget` run. Run with `--dry-run` first, and please open an issue if something doesn't work.
 
@@ -187,6 +199,8 @@ Anything that was on your machine before you ran `install` is left alone.
 
   Without Binwalk and Unblob, REA's firmware analysis and its optional pwndbg crash context stay unavailable.
 - **Shell profile:** on macOS and Linux, agents launched from a desktop launcher rather than a terminal may not see settings that only live in the shell profile. The Ghidra, JADX and JDK settings aren't affected, because `rea setup` writes them into each agent's registration.
+- **Fedora protected packages:** dnf never removes packages that Fedora marks protected (such as `systemd`), or anything they depend on. If installing a tool pulled systemd into a minimal system (sigrok-cli does, through libftdi), systemd stays after uninstall. That's by design.
+- **Arch Linux:** the script won't partially sync pacman's database. If it has never been synced, run `sudo pacman -Syu` first.
 - **Hopper on Linux:** `rea setup` installs Hopper's own package dependencies (Xvfb and others). Uninstall removes the Hopper package but not those dependencies.
 - **Python packages:** pinned by version, not by hash.
 
@@ -218,6 +232,7 @@ These scripts only install other people's work. All credit belongs to the projec
 | [pyelftools](https://github.com/eliben/pyelftools) | Eli Bendersky | Public domain (Unlicense) |
 | [Unicorn Engine](https://github.com/unicorn-engine/unicorn) | Unicorn Engine team | GPL-2.0 |
 | [mitmproxy](https://github.com/mitmproxy/mitmproxy) | mitmproxy project | MIT |
+| [uv](https://github.com/astral-sh/uv) and [python-build-standalone](https://github.com/astral-sh/python-build-standalone) | Astral | uv: Apache-2.0 or MIT; python-build-standalone: MPL-2.0; Python itself: PSF License |
 | [Homebrew](https://github.com/Homebrew/brew) | Homebrew maintainers | BSD-2-Clause |
 | [winget](https://github.com/microsoft/winget-cli) | Microsoft | MIT |
 | [nvm](https://github.com/nvm-sh/nvm) (detected if present, never installed) | nvm-sh | MIT |

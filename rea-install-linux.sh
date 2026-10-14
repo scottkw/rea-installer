@@ -30,6 +30,8 @@ APKTOOL="https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool
 WABT_x64="https://github.com/WebAssembly/wabt/releases/download/1.0.42/wabt-1.0.42-linux-x64.tar.gz 84895407a6bbb80e918f33b16b2fb2206021c150b6bc9ff6f761263a745ab131"
 WABT_arm64="https://github.com/WebAssembly/wabt/releases/download/1.0.42/wabt-1.0.42-linux-arm64.tar.gz a7632c1cc66f70886441842ecf5a2ffa91a98c79e026059458451234ad013ea8"
 RIZIN_x64="https://github.com/rizinorg/rizin/releases/download/v0.9.1/rizin-v0.9.1-static-x86_64.tar.xz 9102249a9f0b6319c5334a2e5cf8d9cc3f2035e1d3def027c41f6a90f647e8cf"
+UV_x64="https://github.com/astral-sh/uv/releases/download/0.12.21/uv-x86_64-unknown-linux-gnu.tar.gz 23f02075b652bb1df64178cfae41b5caf160822e720e2663568f3f5d63bc52c0"
+UV_arm64="https://github.com/astral-sh/uv/releases/download/0.12.21/uv-aarch64-unknown-linux-gnu.tar.gz 030b69227b40af8c1981b7301793dc66e71ed3c796ea8688209dd268bd91ec51"
 WAKARU_x64="https://github.com/pionxzh/wakaru/releases/download/v1.14.0/wakaru-linux-x64.tar.gz db0e620034723195ab426e94d00d55dbd8fd0106a928ada2563f1103196d09fa"
 
 assume_yes=false
@@ -111,9 +113,6 @@ pkg_name() {
   case "$pm:$1" in
     apt-get:ps) echo procps ;;
     *:ps) echo procps-ng ;;
-    apt-get:venv) echo python3-venv ;;
-    dnf:venv) echo python3 ;;
-    pacman:venv) echo python ;;
     apt-get:adb) echo adb ;;
     *:adb) echo android-tools ;;
     apt-get:tshark) echo tshark ;;
@@ -145,9 +144,19 @@ pkg_available() {
   esac
 }
 
+# Names of all installed packages, sorted.
+pkg_list() {
+  case "$pm" in
+    apt-get) dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' | awk '$1 == "ii" {print $2}' | sort -u ;;
+    dnf) rpm -qa --qf '%{NAME}\n' | sort -u ;;
+    pacman) pacman -Qq | sort -u ;;
+  esac
+}
+
 # Installs a tool's package unless present; returns 1 (with a warning) when the distribution does not ship it.
+# Records the package plus every dependency it pulled in, so uninstall can remove exactly that set.
 pkg_install() {
-  local name
+  local name before added
   name="$(pkg_name "$1")"
   if pkg_installed "$name"; then
     log "$name already installed (left as-is)"
@@ -157,6 +166,7 @@ pkg_install() {
     warn "$name is not available from $pm."
     return 1
   fi
+  before="$(pkg_list)"
   case "$pm" in
     apt-get)
       # noninteractive: tshark otherwise stops to ask about non-root capture.
@@ -165,35 +175,34 @@ pkg_install() {
     dnf) run sudo_cmd dnf install -y -q "$name" ;;
     pacman) run sudo_cmd pacman -S --needed --noconfirm "$name" ;;
   esac
-  record "pkg:$name"
+  added="$(comm -13 <(printf '%s\n' "$before") <(pkg_list) | grep -vxF "$name" | tr '\n' ' ')"
+  record "pkg:$name ${added% }"
 }
 
-# Succeeds when removing the package would not take any other installed package with it.
-pkg_removable_alone() {
+# Succeeds when removing exactly these packages would take nothing else with them,
+# i.e. nothing installed since still depends on them.
+pkg_set_removable() {
   case "$pm" in
-    apt-get) [ "$(apt-get -s remove "$1" 2>/dev/null | grep -c '^Remv')" -le 1 ] ;;
+    apt-get)
+      [ -z "$(comm -23 <(apt-get -s purge "$@" 2>/dev/null | awk '/^(Purg|Remv)/{print $2}' | sort -u) \
+                       <(printf '%s\n' "$@" | sort -u))" ]
+      ;;
     dnf)
       # --assumeno always exits non-zero, so read its plan rather than its status.
       local plan
-      plan="$(sudo_cmd dnf remove --assumeno "$1" 2>&1 || true)"
-      ! grep -qi 'dependent packages' <<<"$plan"
+      plan="$(sudo_cmd dnf remove --assumeno "$@" 2>&1 || true)"
+      grep -q '^Removing:' <<<"$plan" && ! grep -qi 'dependent packages' <<<"$plan"
       ;;
-    pacman) pacman -Qi "$1" | grep -q '^Required By *: None' ;;
+    pacman) pacman -Rs --print "$@" >/dev/null 2>&1 ;;
   esac
 }
 
 pkg_remove() {
   case "$pm" in
-    apt-get) run sudo_cmd apt-get remove -y -qq "$1" ;;
-    dnf) run sudo_cmd dnf remove -y -q "$1" ;;
-    pacman) run sudo_cmd pacman -Rs --noconfirm "$1" ;;
+    apt-get) run sudo_cmd apt-get purge -y -qq "$@" ;;
+    dnf) run sudo_cmd dnf remove -y -q "$@" ;;
+    pacman) run sudo_cmd pacman -Rs --noconfirm "$@" ;;
   esac
-}
-
-# Packages apt would autoremove right now (dnf and pacman -Rs already drop a package's unused dependencies).
-apt_orphans() {
-  [ "$pm" = apt-get ] || return 0
-  apt-get -s autoremove 2>/dev/null | awk '/^Remv/{print $2}' | sort
 }
 
 pkg_owner() {
@@ -310,6 +319,23 @@ install_jdk() {
   setting JAVA_HOME "$STATE_DIR/jdk"
 }
 
+# Creates ~/.rea-installer/venvs/NAME with uv's own Python 3.12 and installs the given pinned packages.
+# A private interpreter avoids the distribution's Python: Unicorn 2.1.2 has no wheels past 3.13, mitmproxy needs 3.12+.
+make_venv() {
+  local name="$1" uv_dir
+  shift
+  if [ "$(arch)" = arm64 ]; then
+    uv_dir="$(unpack "$UV_arm64" uv-aarch64-unknown-linux-gnu)"
+  else
+    uv_dir="$(unpack "$UV_x64" uv-x86_64-unknown-linux-gnu)"
+  fi
+  export UV_PYTHON_INSTALL_DIR="$STATE_DIR/python" UV_CACHE_DIR="$STATE_DIR/uv-cache"
+  if [ ! -x "$STATE_DIR/venvs/$name/bin/python" ]; then
+    run "$uv_dir/uv" venv -q --python 3.12 "$STATE_DIR/venvs/$name" || return 1
+  fi
+  run "$uv_dir/uv" pip install -q --python "$STATE_DIR/venvs/$name/bin/python" "$@"
+}
+
 do_install() {
   [ "$(uname -s)" = Linux ] || die "this script supports Linux only."
   case "$(arch)" in x64|arm64) ;; *) die "unsupported architecture $(uname -m)." ;; esac
@@ -405,12 +431,12 @@ do_install() {
     tool_setting REA_TSHARK_COMMAND tshark
     tool_setting REA_CAPINFOS_COMMAND capinfos
     tool_setting REA_SIGROK_COMMAND sigrok-cli
-    local has_venv=true
-    pkg_install venv || has_venv=false
-    if [ "$(arch)" = x64 ] && [ "$has_venv" = true ]; then
-      run python3 -m venv "$STATE_DIR/venvs/pwntools"
-      run "$STATE_DIR/venvs/pwntools/bin/pip" install -q pwntools==4.15.0 pyelftools==0.33 unicorn==2.1.2
-      setting REA_PWNTOOLS_PYTHON "$STATE_DIR/venvs/pwntools/bin/python"
+    if [ "$(arch)" = x64 ]; then
+      if make_venv pwntools pwntools==4.15.0 pyelftools==0.33 unicorn==2.1.2; then
+        setting REA_PWNTOOLS_PYTHON "$STATE_DIR/venvs/pwntools/bin/python"
+      else
+        warn "pwntools could not be installed; skipping it."
+      fi
       local wakaru_dir="$TOOLS_DIR/wakaru-1.14.0" wakaru_tgz
       if [ ! -x "$wakaru_dir/wakaru" ]; then
         wakaru_tgz="$(fetch "$WAKARU_x64")"
@@ -420,14 +446,12 @@ do_install() {
       fi
       setting REA_WAKARU_COMMAND "$wakaru_dir/wakaru"
     else
-      warn "skipping pwntools and Wakaru (REA supports them on Linux x64 only; pwntools also needs python3 venv)."
+      warn "skipping pwntools and Wakaru (REA supports them on Linux x64 only)."
     fi
-    if [ "$has_venv" = true ] && python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
-      run python3 -m venv "$STATE_DIR/venvs/mitmproxy"
-      run "$STATE_DIR/venvs/mitmproxy/bin/pip" install -q mitmproxy==12.2.3
+    if make_venv mitmproxy mitmproxy==12.2.3; then
       setting REA_MITMDUMP_COMMAND "$STATE_DIR/venvs/mitmproxy/bin/mitmdump"
     else
-      warn "mitmproxy 12.2.3 needs Python 3.12+; skipping it."
+      warn "mitmproxy could not be installed; skipping it."
     fi
   fi
 
@@ -437,7 +461,8 @@ do_install() {
   local rea_bin="$NPM_PREFIX/bin/rea"
   record "npm:$(command -v npm)"
   [ "$dry_run" = true ] || [ -x "$rea_bin" ] || die "npm finished but $rea_bin is missing."
-  case ":$PATH:" in *":$NPM_PREFIX/bin:"*) ;; *) profile_lines+=("export PATH=\"$NPM_PREFIX/bin:\$PATH\"") ;; esac
+  # Always written: on a rerun PATH may already contain it only because the old block put it there.
+  profile_lines+=("export PATH=\"$NPM_PREFIX/bin:\$PATH\"")
 
   # 8. Shell profile, so terminals and agents started from them see the settings.
   if ((${#profile_lines[@]} > 0)); then
@@ -501,8 +526,8 @@ do_uninstall() {
   fi
 
   # 3. Everything else we recorded, newest first.
-  local orphans_before
-  orphans_before="$(apt_orphans)"
+  local installed_now
+  installed_now="$(pkg_list)"
   while IFS= read -r line; do
     case "$line" in
       profile:*)
@@ -516,24 +541,23 @@ do_uninstall() {
         fi
         ;;
       pkg:*)
-        line="${line#pkg:}"
-        if pkg_installed "$line"; then
-          if pkg_removable_alone "$line"; then
-            log "Removing $line"
-            pkg_remove "$line"
-          else
-            warn "$line is now needed by other packages; leaving it installed."
-          fi
+        # "pkg:NAME DEP..." -- apt leaves dependencies behind, so remove the recorded set with it.
+        # dnf and pacman -Rs drop unused dependencies themselves (and dnf keeps ones protected packages need).
+        local pkg_set name="${line#pkg:}"
+        name="${name%% *}"
+        if [ "$pm" = apt-get ]; then read -r -a pkg_set <<<"${line#pkg:}"; else pkg_set=("$name"); fi
+        mapfile -t pkg_set < <(comm -12 <(printf '%s\n' "${pkg_set[@]}" | sort -u) <(printf '%s\n' "$installed_now"))
+        ((${#pkg_set[@]} > 0)) || continue
+        if pkg_set_removable "${pkg_set[@]}"; then
+          log "Removing $name"
+          pkg_remove "${pkg_set[@]}" || warn "removing $name failed; continuing."
+          installed_now="$(pkg_list)"
+        else
+          warn "$name or its dependencies are now needed by other packages; leaving them installed."
         fi
         ;;
     esac
   done < <(tac <<<"$state")
-
-  # apt leaves dependencies behind; remove only the ones these removals orphaned.
-  local orphan
-  for orphan in $(comm -13 <(printf '%s\n' "$orphans_before") <(apt_orphans)); do
-    pkg_remove "$orphan"
-  done
 
   # REA's uninstall empties its shared skill folder but leaves it.
   rmdir "$HOME/.agents/skills" "$HOME/.agents" 2>/dev/null || true
