@@ -615,14 +615,18 @@ sandbox "$LINUX" 'do_uninstall'
 | A3 | Changing Linux's `[ -r /dev/tty ]` to an open probe is in scope for DRY-01 (it also changes non-dry, no-tty installs from crash to warning) | Pitfall 2 | Needs user OK if considered scope creep; the alternative `docker run -t` hides a real bug |
 | A4 | Routing Rizin and Wakaru through `unpack` is in FAIL-01 scope (FAIL-01 says "extracting a downloaded archive", while HARD-01 names only `unpack`) | Pitfall 7 | If out of scope, keep `tar -xzf` and the strict top-level-folder `mv` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **FAIL-03 "reported": is brew's own stderr enough?**
    - What we know: with `|| return 1` (D-08), every real caller stops via errexit. The output shows `  $ brew install X` and brew's error, then exits 1. There is no `error:` line.
    - Recommendation: keep D-08's `|| return 1`. If an explicit line is wanted, use `run brew install "$@" || { warn "brew install $name failed."; return 1; }`. Planner's call; it does not affect the tests.
+   - RESOLVED: explicit line chosen. Plan 01-04 Task 1 adds `warn "brew install $name failed."` before `return 1`, and the FAIL-03 check asserts that text.
 2. **Rizin and Wakaru staging (A4).** Recommended yes. It removes two inline extract blocks.
+   - RESOLVED: yes. Plan 01-03 Task 1 step 2 routes Rizin and Wakaru through the staging `unpack`.
 3. **Profile without a trailing newline (Pitfall 6).** This is a pre-existing uninstall correctness bug against the Core Value. Not in Phase 1 requirements. Suggest capturing it as a todo or a Phase 3 item rather than expanding this phase.
+   - RESOLVED: deferred, out of Phase 1 scope. Plan 01-01 Task 2 keeps the TEST-02 sample profile newline-terminated and records the bug as a deferred issue in 01-01-SUMMARY.md.
 4. **Red log shape for DRY-02.** One container run hides the uninstall failure behind the install failure. Recommend two runs (install, uninstall) so each requirement gets its own FAIL line.
+   - RESOLVED: two runs. Plan 01-02 Task 2 uses two separate `docker run` invocations for the DRY-02 install and uninstall checks.
 
 ## Environment Availability
 
