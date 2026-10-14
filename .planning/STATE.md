@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Consistent Java Handling
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-10-14T19:23:54.295Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-10-14T19:31:01.881Z"
 last_activity: 2026-10-14
-last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 89201e24504008e507f7c8d3b17c3d36f0efa3b7
+last_activity_desc: Phase 2 execution started
+state_head: c63d58e2c260942c65dfabbed6ecba47db3b2362
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 33
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 
 ## Current Position
 
-Phase: 2 (Consistent Java Handling) — READY TO EXECUTE
-Plan: Not started
+Phase: 2 (Consistent Java Handling) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-10-14 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-10-14 — Phase 2 execution started
 
 Progress: [███░░░░░░░] 33%
 
@@ -61,6 +61,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 01 P03 | 2min | 2 tasks | 1 files |
 | Phase 01 P04 | 1m | 2 tasks | 2 files |
 | Phase 01 P05 | 3m | 2 tasks | 0 files |
+| Phase 02 P01 | 2 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 01]: A failed rea uninstall is a warning with the same text on macOS, Linux and Windows
 - [Phase 01]: Phase 01 CI gate reads the run for the phase code HEAD (770a678); later docs-only tracking commits are outside the gate
 - [Phase 01 UAT]: WR-01, WR-02, WR-05 accepted as known limitations (deferred in 01-REVIEW-DISPOSITION.md)
+- [Phase 02]: jdk_usable (JDK 21+ via java -version, fail closed) shared byte-identical by both bash scripts; Linux install_jdk reuses only a JDK 21+ JAVA_HOME
+- [Phase 02]: Linux post-install jdk_usable self-check dies loudly; java -version output never printed
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T18:55:31.011Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-consistent-java-handling/02-CONTEXT.md
+Last session: 2026-10-14T19:31:01.863Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
