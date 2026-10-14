@@ -299,10 +299,16 @@ remove_profile_block() {
 # Node.js 24 LTS from nodejs.org into ~/.rea-installer/node, verified against its SHASUMS256.txt.
 install_node() {
   local base="https://nodejs.org/dist/latest-v24.x" sums line sha file
+  # A dry run cannot fetch the checksum list: step 1 only printed the curl install.
+  if [ "$dry_run" = true ]; then
+    log "Would download Node.js 24 from $base into $STATE_DIR/node"
+    PATH="$STATE_DIR/node/bin:$PATH"
+    return
+  fi
   sums="$(curl -fsSL --proto '=https' "$base/SHASUMS256.txt")"
   line="$(grep -E " node-v[0-9.]+-linux-$(arch)\.tar\.gz\$" <<<"$sums")" || die "no Node.js 24 build for $(arch)."
   read -r sha file <<<"$line"
-  rm -rf "$STATE_DIR/node"
+  run rm -rf "$STATE_DIR/node"
   local dir
   dir="$(unpack "$base/$file $sha" "${file%.tar.gz}")"
   run mv "$dir" "$STATE_DIR/node"
@@ -315,7 +321,9 @@ install_jdk() {
     log "Using JDK at $JAVA_HOME"
     return
   fi
-  if [ ! -d "$STATE_DIR/jdk" ]; then
+  if [ ! -d "$STATE_DIR/jdk" ] && [ "$dry_run" = true ]; then
+    log "Would download Temurin 21 into $STATE_DIR/jdk"
+  elif [ ! -d "$STATE_DIR/jdk" ]; then
     local meta
     meta="$(curl -fsSL --proto '=https' "https://api.adoptium.net/v3/assets/latest/21/hotspot?architecture=$(arch | sed s/arm64/aarch64/)&image_type=jdk&os=linux&vendor=eclipse" |
       node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>{const a=JSON.parse(s)[0];console.log(a.binary.package.link,a.binary.package.checksum,a.release_name)})')"
@@ -482,7 +490,7 @@ do_install() {
   log "Running rea setup"
   if [ "$assume_yes" = true ]; then
     run "$rea_bin" setup --yes --all-detected
-  elif [ -r /dev/tty ]; then
+  elif (: </dev/tty) 2>/dev/null; then
     run "$rea_bin" setup </dev/tty
   else
     warn "no terminal available; run '$rea_bin setup' yourself."
@@ -512,7 +520,7 @@ do_uninstall() {
   [ -x "$rea_bin" ] || rea_bin="$(command -v rea || true)"
   if [ -n "$rea_bin" ]; then
     log "Removing REA agent registrations, skills and data"
-    run "$rea_bin" uninstall --purge-data
+    run "$rea_bin" uninstall --purge-data || warn "rea uninstall failed; remove agent registrations by hand."
   else
     warn "rea CLI not found; skipping agent deregistration."
   fi
@@ -558,7 +566,7 @@ do_uninstall() {
   done < <(tac <<<"$state")
 
   # REA's uninstall empties its shared skill folder but leaves it.
-  rmdir "$HOME/.agents/skills" "$HOME/.agents" 2>/dev/null || true
+  [ "$dry_run" = true ] || rmdir "$HOME/.agents/skills" "$HOME/.agents" 2>/dev/null || true
 
   # Also removes the downloaded Node.js, JDK, Ghidra, jars, WABT, Wakaru and Python venvs.
   [ "$dry_run" = true ] || rm -rf "$STATE_DIR"
