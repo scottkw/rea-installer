@@ -92,7 +92,7 @@ There are no source subdirectories, no `tests/`, no `src/`, no build or package 
 - Each flag maps to one variable in the script's parsing loop (`--with-android` sets `with_android=true`; `-WithAndroid` sets `$WithAndroid`).
 
 **Ledger kinds:**
-- Lowercase kind, colon, value: `clt`, `homebrew`, `profile:`, `npm:`, `app:`, `hopper:`, `pkg:`, `winget:`, `env:`.
+- Lowercase kind, colon, value: `clt`, `homebrew`, `brew:`, `cask:`, `profile:`, `npm:`, `app:`, `hopper:`, `pkg:`, `winget:`, `env:`.
 
 **Directories (runtime, under the user home):**
 - `~/.rea-installer/` (ledger and tool downloads). Windows: `%USERPROFILE%\.rea-installer\`.

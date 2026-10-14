@@ -84,7 +84,7 @@ All of the following are downloaded or installed by the scripts at run time. Non
 
 **Environment:**
 - The scripts write persistent environment settings, not read them from a file:
-  - macOS and Linux: a marked block in the shell profile (`~/.zshrc` on macOS; `~/.bashrc` on Linux bash, or the profile set by `PROFILE_BEGIN` / `PROFILE_END` markers in `rea-install-macos.sh` lines 22-23 and `rea-install-linux.sh` lines 25-26). Exports include `JAVA_HOME`, `PATH` additions for the npm prefix and Node, `REA_JADX_MCP_JAR`, `REA_APKTOOL_COMMAND`, `REA_RIZIN_COMMAND`, `REA_WABT_BIN_DIRECTORY`, `REA_OBJDUMP_COMMAND`, `REA_TSHARK_COMMAND`, `REA_CAPINFOS_COMMAND`, `REA_SIGROK_COMMAND`, `REA_PWNTOOLS_PYTHON`, `REA_WAKARU_COMMAND`, `REA_MITMDUMP_COMMAND`.
+  - macOS and Linux: a marked block in the shell profile (file chosen by `$SHELL`: zsh → `~/.zshrc`, otherwise `~/.bash_profile` on macOS or `~/.bashrc` on Linux; block delimited by `PROFILE_BEGIN` / `PROFILE_END`, `rea-install-macos.sh` lines 22-23 and `rea-install-linux.sh` lines 22-23). macOS exports only `JAVA_HOME`, `REA_OBJDUMP_COMMAND` and `REA_WABT_BIN_DIRECTORY` (`REA_JADX_MCP_JAR` is exported for the run only, not persisted). Linux exports `JAVA_HOME`, `PATH` additions for the npm prefix and Node, `GHIDRA_INSTALL_DIR`, `REA_JADX_MCP_JAR`, `REA_APKTOOL_COMMAND`, `REA_RIZIN_COMMAND`, `REA_WABT_BIN_DIRECTORY`, `REA_TSHARK_COMMAND`, `REA_CAPINFOS_COMMAND`, `REA_SIGROK_COMMAND`, `REA_PWNTOOLS_PYTHON`, `REA_WAKARU_COMMAND`, `REA_MITMDUMP_COMMAND` (not `REA_OBJDUMP_COMMAND`; objdump is found on `PATH`).
   - Windows: user-scope environment variables set through `[Environment]::SetEnvironmentVariable`, with the same `REA_*` names where applicable (`rea-install-windows.ps1` lines 99-111, 189-202).
 - Install state is recorded in `~/.rea-installer/installed` (`STATE_FILE` in `rea-install-macos.sh` line 15 and `rea-install-linux.sh`). Windows records in `$StateDir`. Each line is a record such as `brew:<name>`, `cask:<name>`, `npm:<path>`, `pkg:<name> <deps...>`, `winget:<id>`, `env:<name>`, `homebrew`.
 - Downloaded artifacts live in `~/.rea-installer` (`STATE_DIR` on macOS and Linux) and are removed by `uninstall`.
@@ -101,7 +101,7 @@ All of the following are downloaded or installed by the scripts at run time. Non
 ## Platform Requirements
 
 **Development (to edit or run the scripts):**
-- Any POSIX shell for `rea-install-macos.sh` and `rea-install-linux.sh`. Bash 3.2 must remain compatible on macOS.
+- Bash, not a generic POSIX shell (`[[ ]]`, arrays, `<<<`, `${!v}`, `compgen`). `rea-install-macos.sh` must stay Bash 3.2 compatible; `rea-install-linux.sh` uses `mapfile` and needs Bash 4+. Running either with `sh` (dash on Ubuntu) fails.
 - Windows PowerShell 5.1 or PowerShell 7 for `rea-install-windows.ps1`.
 - Linux x64 or arm64 with apt, dnf, or pacman. Container testing used Ubuntu 24.04, Fedora 44, and Arch Linux.
 - macOS on Apple silicon or Intel. Windows 10+ on x64 or ARM64 (the README says Ghidra and JADX are x64-only on Windows).

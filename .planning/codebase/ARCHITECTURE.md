@@ -48,7 +48,7 @@ The repository is a set of three independent, self-contained installer scripts. 
 - Three platform implementations that mirror one another: `rea-install-macos.sh` (340 lines), `rea-install-linux.sh` (593 lines), `rea-install-windows.ps1` (280 lines). Behaviour is intended to match across platforms (same subcommands, same flags where applicable, same ordering of steps).
 - Two subcommands only: `install` and `uninstall`. Anything else prints usage or fails with `die`.
 - Every mutation is routed through a single wrapper (`run` in bash, `Invoke-Step` in PowerShell), so `--dry-run` / `-DryRun` prints the command instead of running it.
-- Every change that uninstall must reverse is appended to a ledger via `record` (bash) or `Add-Record` (PowerShell). Uninstall reads the ledger in reverse (`tac` in bash, `[array]::Reverse` in PowerShell) and removes only recorded items.
+- Every change that uninstall must reverse is appended to a ledger via `record` (bash) or `Add-Record` (PowerShell). Uninstall reads the ledger in reverse (`tac` on Linux, `tail -r` on macOS, `[array]::Reverse` in PowerShell) and removes only recorded items.
 - No third-party code is linked in. Dependencies are fetched at runtime: distribution packages, Homebrew, winget, npm, or GitHub release assets pinned by URL and SHA-256 digest.
 - Idempotence is by checking, not by state: `pkg_installed`, `brew_install`, `Test-WingetInstalled`, and "already present" checks skip work already done, and `record` deduplicates lines with `grep -qxF`.
 
@@ -87,7 +87,7 @@ Each script is organised into the same logical layers, expressed as sections sep
 **Uninstall phase:**
 - Purpose: reverse the ledger.
 - Location: macOS `do_uninstall` (`rea-install-macos.sh` ~246–316); Linux `do_uninstall` (~503–~575); Windows `Invoke-Uninstall` (`rea-install-windows.ps1` ~222–272).
-- Behaviour: reads `~/.rea-installer/installed`, processes entries in reverse, and dispatches on the `kind:` prefix (`clt`, `homebrew`, `profile`, `npm`, `app`, `pkg`, `hopper`, `env`, `winget`). Calls `rea uninstall --purge-data` (Windows, ~236) to let REA clean its own data first, then removes the ledger directory.
+- Behaviour: reads `~/.rea-installer/installed`, processes entries in reverse, and dispatches on the `kind:` prefix (`clt`, `homebrew`, `brew`, `cask`, `profile`, `npm`, `app`, `pkg`, `hopper`, `env`, `winget`). Calls `rea uninstall --purge-data` (Windows, ~236) to let REA clean its own data first, then removes the ledger directory.
 - Depends on: ledger file and helpers.
 
 **Main dispatch:**
@@ -103,15 +103,15 @@ Each script is organised into the same logical layers, expressed as sections sep
 2. Ensure base requirements: Xcode Command Line Tools and Homebrew (macOS); package manager and `sudo`-capable access (Linux); winget (Windows). Each successful step is written to the ledger (`clt`, `homebrew`, `pkg:...`, `winget:...`).
 3. Ensure a supported Node.js (`node_supported`). If absent, install via Homebrew (macOS), nodejs.org tarball into the home directory (Linux `install_node`), or winget `OpenJS.NodeJS.LTS` (Windows).
 4. Install JDK 21 (default), Ghidra 12.1.4 (skipped with `--no-ghidra`; skipped on Windows ARM64 and Linux arm64 where REA lacks support), then optional groups.
-5. Install REA: `npm install --global rea-agents@latest` (Windows also appends `@latest` through `$Package@latest`). Record `npm:<path to npm>`.
-6. Run `rea setup` (with `--yes --all-detected` on Windows when `-Yes` is set). On macOS and Linux, Hopper is offered; its app name is recorded as `app:` or `hopper:` entries when newly added.
-7. Append REA environment settings to the shell profile (`profile:<file>`) on macOS and Linux (`profile_lines` array). On Windows, persistent user environment variables are set with `Set-UserEnv` and recorded as `env:<NAME>`.
+5. Write REA environment settings. On macOS and Linux they go into a marked shell-profile block (`profile:<file>`; `profile_exports` on macOS, `profile_lines` on Linux). On Windows, persistent user environment variables are set with `Set-UserEnv` as each tool is installed and recorded as `env:<NAME>`. These must exist **before** `rea setup`, which copies `JAVA_HOME` and the `REA_*` settings into agent registrations. (Linux writes the profile block after the npm install; macOS before it.)
+6. Install REA: `npm install --global rea-agents@latest`. macOS and Linux record `npm:<path to npm>`; Windows does not.
+7. Run `rea setup` (with `--yes --all-detected` when `--yes` / `-Yes` is set). On macOS and Linux, Hopper is offered; its app path or package owner is recorded as `app:` or `hopper:` when newly added.
 
 ### Ledger Format
 
 - Path: `~/.rea-installer/installed` (`STATE_FILE` in `rea-install-macos.sh:15` and `rea-install-linux.sh:18`; `$StateFile` in `rea-install-windows.ps1`).
 - Format: one `kind:value` record per line. Records are deduplicated on write.
-- Known kinds: `clt`, `homebrew`, `profile:<path>`, `npm:<path>`, `app:<name>`, `hopper:<owner>`, `pkg:<name> <added packages>`, `winget:<id>`, `env:<name>`.
+- Known kinds: `clt`, `homebrew`, `brew:<formula>`, `cask:<cask>`, `profile:<path>`, `npm:<path>`, `app:<name>`, `hopper:<owner>`, `pkg:<name> <added packages>`, `winget:<id>`, `env:<name>`.
 - Non-state artefacts go under `~/.rea-installer/tools` (Windows: `$ToolsDir`; Linux and macOS write downloads and venvs under the same directory tree).
 
 ### Uninstall Path
@@ -169,8 +169,8 @@ Each script is organised into the same logical layers, expressed as sections sep
 
 - **Threading:** Single-threaded, sequential. No parallel downloads or installs.
 - **Global state:** Script-level globals in each file (`assume_yes`, `dry_run`, `with_ghidra`, `with_android`, `with_extras`, `with_linux_tools`, `profile_lines`, `pm`, `apt_updated` in `rea-install-linux.sh`; equivalent `$Downloads`, `$StateDir`, `$StateFile`, `$ToolsDir`, `$Package`, `$JdkId` in `rea-install-windows.ps1`). They are set once during argument parsing or at file load and treated as read-only afterwards, except `apt_updated`, `profile_lines`, and `pm`, which are updated as the run proceeds.
-- **Shell compatibility:** `rea-install-macos.sh` must run on Bash 3.2 (macOS default). Avoid Bash 4+ features such as associative arrays and `mapfile`.
-- **Strict mode:** Bash scripts rely on the shell defaults plus explicit `die` on errors; Windows script sets `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'Stop'` at the top.
+- **Shell compatibility:** `rea-install-macos.sh` must run on Bash 3.2 (macOS default). Avoid Bash 4+ features such as associative arrays and `mapfile` there. `rea-install-linux.sh` uses `mapfile` and needs Bash 4+.
+- **Strict mode:** Both bash scripts run `set -euo pipefail`. Note that bash turns `set -e` off inside `$(...)` and inside any function called on the left of `||`/`&&` or in an `if` condition, so failures there are not caught (see `.planning/AUDIT.md` HARD-01/02). The Windows script sets `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'Stop'` at the top.
 - **Elevation:** Linux uses `sudo_cmd`, which skips `sudo` when already root. Windows and macOS Homebrew install paths do not elevate by themselves.
 - **No shared code:** The three scripts duplicate helper logic (`log`/`Log`, `run`/`Invoke-Step`, `record`/`Add-Record`, `confirm`/`Confirm-Step`, `load_nvm`, `node_supported`, `profile_file`, `remove_profile_block` appear in both bash files). Changes to ledger format or safety behaviour must be applied to each script by hand.
 - **Ledger coupling:** Uninstall depends on exact `kind:value` strings written by install. Renaming a kind in one phase without updating the matching uninstall branch leaves stale installs.
@@ -215,7 +215,7 @@ Each script is organised into the same logical layers, expressed as sections sep
 
 **Authentication:** None. The scripts do not hold credentials. Hopper (commercial) and other paid tools are not installed by the scripts and need the user's own licence.
 
-**Dry-run:** Enforced at the `run` / `Invoke-Step` boundary and by explicit `dry_run` checks at direct side-effect sites. Any new side effect must go through one of these or check the flag.
+**Dry-run:** Enforced at the `run` / `Invoke-Step` boundary and by explicit `dry_run` checks at direct side-effect sites. Any new side effect must go through one of these or check the flag. Known violations on Linux: `rm -rf "$STATE_DIR/node"` in `install_node` and `rmdir ~/.agents/skills ~/.agents` in `do_uninstall` (`.planning/AUDIT.md` HARD-03, HARD-12).
 
 ---
 

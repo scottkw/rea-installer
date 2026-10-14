@@ -181,7 +181,7 @@ grep -q 'npm install --global' <<<"$out" || echo "npm step did not print"
 ```bash
 ./rea-install-linux.sh install --yes
 ./rea-install-linux.sh install --yes   # second run should log "already" and not re-download
-grep -c '# >>> rea-installer >>>' ~/.bashrc   # expect 1
+grep -c '# >>> rea-installer >>>' ~/.bashrc   # expect 1 (use ~/.zshrc if $SHELL is zsh)
 ```
 
 **Ledger check pattern (manual):**

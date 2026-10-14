@@ -68,17 +68,17 @@ The repository is small: three installer scripts (`rea-install-macos.sh`, `rea-i
 - Trigger: Homebrew `node` installed at an unsupported version.
 - Workaround: Run `brew upgrade node` by hand, then rerun.
 
-**Optional-tool failures are silent on Linux:**
-- Symptoms: `pkg_install adb || true`, `pkg_install tshark || true`, `pkg_install binutils || true` and `if ! pkg_install rizin` use `||` to continue. Because `set -e` is disabled inside a command that is the left side of `||`, a real package-manager failure (not just "unavailable") is also swallowed with no message. The README says "When an optional tool isn't available, the script warns and skips it", which is only true for the "not available" case.
-- Files: `rea-install-linux.sh` (steps 4, 5 and 6 of `do_install`; `pkg_install`)
-- Trigger: A transient apt, dnf or pacman error during an optional install.
-- Workaround: Read the summary output and check `rea doctor`. Fix approach: have `pkg_install` distinguish "not available" (warn) from "install failed" (error or at least warn), and log every skipped optional tool at the end.
+**Package install failures are silent on Linux, including required tools:**
+- Symptoms: every `pkg_install` call is on the left of `||` or in an `if` (`pkg_install curl || die "curl is required."`, `pkg_install adb || true`, `if ! pkg_install rizin`). Bash disables `set -e` inside such a function, so a failed `apt-get`/`dnf`/`pacman install` falls through to `record "pkg:..."` and the function returns 0. The required-tool `die` guards never fire, and the ledger lists a package that was never installed.
+- Files: `rea-install-linux.sh` (`pkg_install` ~158-180; callers in `do_install` ~352-356, 400-430)
+- Trigger: a transient package-manager error, or the dpkg lock held by unattended-upgrades on a fresh Ubuntu machine.
+- Fix approach: append `|| return 1` to each install command in `pkg_install`. Tracked as `.planning/AUDIT.md` HARD-02.
 
-**Dry runs still perform network access and writes on Linux:**
-- Symptoms: `install_node` calls `curl` directly, and `install_jdk` fetches Adoptium metadata and runs `node -e`, both outside `run`. `--dry-run` therefore still hits the network and can fail on it. `npm ls` and `apt-get update` in some paths also execute.
-- Files: `rea-install-linux.sh` (`install_node`, `install_jdk`, `pkg_available`)
-- Trigger: `--dry-run` on a machine without network access.
-- Workaround: None needed for normal use. Fix approach: route metadata fetches through `run` or print a placeholder in dry-run mode.
+**Linux dry run aborts on a machine without Node, and makes real changes:**
+- Symptoms: in dry-run, `install_node` only prints its steps, so no `node` exists; `install_jdk` then runs `curl ... | node -e ...`, which fails with 127 and exits the script under `set -euo pipefail`. Hit by default options on x64 (Ghidra) and by `--with-android`. Separately, `rm -rf "$STATE_DIR/node"` in `install_node` and `rmdir ~/.agents/skills ~/.agents` in `do_uninstall` run for real under `--dry-run`. (`apt-get update` goes through `run`, and `pkg_available` returns early in dry-run, so neither runs.)
+- Files: `rea-install-linux.sh` (`install_node` ~292-302, `install_jdk` ~305-320, `do_uninstall` ~563)
+- Trigger: `./rea-install-linux.sh install --dry-run` on a fresh machine, which is the README's recommended first step.
+- Fix approach: short-circuit `install_jdk`'s download in dry-run; wrap the `rm -rf` and `rmdir` in `run` or a `dry_run` guard. Tracked as `.planning/AUDIT.md` HARD-03 and HARD-12.
 
 ## Security Considerations
 
@@ -178,8 +178,8 @@ The repository is small: three installer scripts (`rea-install-macos.sh`, `rea-i
 
 **Ghidra and JDK coupling on macOS:**
 - Files: `rea-install-macos.sh` (`install_jdk`, step 4)
-- Why fragile: `JAVA_HOME` is set only inside `install_jdk`, and `profile_exports` is written only when that function runs. If `--no-ghidra` is combined with a later step that expects `JAVA_HOME`, the variable is unset in the profile.
-- Safe modification: Keep `install_jdk` idempotent and call it from each step that needs a JDK, which the Android branch already does.
+- Why fragile: `JAVA_HOME` reaches the profile block only when `install_jdk` runs, and the block is rewritten whole on each run. On a rerun, Ghidra is already on `PATH` (step 4 skips `install_jdk`) and `JAVA_HOME` is already set from the old block (the Android branch skips it too). With `--with-extras` the block is rewritten with only the extras, so `JAVA_HOME` is dropped from new shells and later `rea setup` runs. Linux avoids this by unsetting its own settings and rewriting them every run (`rea-install-linux.sh` ~345-349).
+- Safe modification: Always re-add `JAVA_HOME` to `profile_exports` when it points at the script's `openjdk@21`. Tracked as `.planning/AUDIT.md` HARD-11.
 
 ## Scaling Limits
 

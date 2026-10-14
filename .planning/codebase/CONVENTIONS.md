@@ -110,7 +110,7 @@ When adding a new external command, check for it with `command -v` before use, u
 
 **Dry run:**
 - All side effects must go through the `run` helper (Bash) or `Invoke-Step` (PowerShell), which print the command and skip execution under `--dry-run`/`-DryRun`. Writes to the state file go through `record`/`Add-Record`, which also honor dry run.
-- Do not call a mutating command directly (`brew install`, `npm install`, `rm -rf`) outside these wrappers. The one existing exception is the `sed -i` profile edit in `remove_profile_block`, which also goes through `run`.
+- Do not call a mutating command directly (`brew install`, `npm install`, `rm -rf`) outside these wrappers, unless guarded by an explicit `[ "$dry_run" = true ] ||` check (as the final `rm -rf "$STATE_DIR"` in uninstall is). Known violations to fix: `rm -rf "$STATE_DIR/node"` in Linux `install_node` and `rmdir ~/.agents/skills ~/.agents` in Linux `do_uninstall` (`.planning/AUDIT.md` HARD-03, HARD-12).
 
 **Idempotency and the ledger:**
 - Before installing, check whether the tool is already present (`brew list --versions`, `pkg_installed`, `Test-WingetInstalled`, `command -v`). If present, log `"<name> already installed (left as-is)"` and do not record it.

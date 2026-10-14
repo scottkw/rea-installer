@@ -38,7 +38,7 @@ This repository has no runtime integrations of its own: no database, no auth pro
 - `https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh` - installs Homebrew if absent (`rea-install-macos.sh` line ~162)
 - `https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh` - removes Homebrew on uninstall, only if the script installed it (line ~307)
 - Formulas and casks used: `node`, `ghidra`, `openjdk@21`, `apktool`, `rizin`, `binutils`, `wabt`, cask `android-platform-tools`
-- Note: the Homebrew install and uninstall scripts are fetched and executed with `bash -c "$(curl ...)"` with no pinned checksum. This is the one place where the scripts run remote code without verifying it, a deliberate upstream-trust choice.
+- Note: the Homebrew install and uninstall scripts are fetched and executed with `bash -c "$(curl ...)"` with no pinned checksum. This is a deliberate upstream-trust choice, and not the only unverified remote code: `rea-agents@latest` from npm (installed and then executed by `rea setup`), Homebrew/winget/distribution packages, and the Linux PyPI installs (pinned by version, not by hash) are also trusted without a pinned checksum. Only the GitHub release assets and the Node.js/Temurin archives are checksum-verified.
 
 **Microsoft winget:**
 - Package source for Windows system components (`winget install --id ... --exact --silent`), see `rea-install-windows.ps1` lines 84-95 and 260-263 for uninstall
@@ -77,7 +77,7 @@ All downloads below are pinned by version and by SHA-256. The scripts refuse a f
 - Local filesystem only. The scripts use:
   - `~/.rea-installer/` (`STATE_DIR` in macOS and Linux scripts): downloads, JDK, Node.js, Python venvs, uv cache, and the `installed` ledger file (`STATE_FILE`)
   - Windows: the state directory is `$StateDir` in `rea-install-windows.ps1`, and downloads go under the same root
-  - Shell profile: `~/.zshrc` (macOS) or `~/.bashrc` (Linux bash), inside a marked block delimited by `# >>> rea-installer >>>` and `# <<< rea-installer <<<`
+  - Shell profile, chosen by `$SHELL` on both platforms: zsh → `${ZDOTDIR:-$HOME}/.zshrc`; otherwise `~/.bash_profile` (macOS) or `~/.bashrc` (Linux). The settings live inside a marked block delimited by `# >>> rea-installer >>>` and `# <<< rea-installer <<<`
   - Windows: user environment variables, not a file
 
 **Caching:**
