@@ -102,7 +102,8 @@ brew_install() {
   if brew list --versions "$@" >/dev/null 2>&1; then
     log "$name already installed (left as-is)"
   else
-    run brew install "$@"
+    # Explicit line because brew's own stderr can be empty (e.g. a killed process).
+    run brew install "$@" || { warn "brew install $name failed."; return 1; }
     record "$kind:$name"
   fi
 }
@@ -257,7 +258,7 @@ do_uninstall() {
   [ -x "$rea_bin" ] || rea_bin="$(command -v rea || true)"
   if [ -n "$rea_bin" ]; then
     log "Removing REA agent registrations, skills and data"
-    run "$rea_bin" uninstall --purge-data
+    run "$rea_bin" uninstall --purge-data || warn "rea uninstall failed; remove agent registrations by hand."
   else
     warn "rea CLI not found; skipping agent deregistration."
   fi
