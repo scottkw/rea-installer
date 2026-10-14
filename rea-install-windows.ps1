@@ -80,6 +80,20 @@ function Test-NodeSupported {
     return ($v.Major -eq 22 -and $v.Minor -ge 19) -or ($v.Major -eq 24 -and $v.Minor -ge 15) -or $v.Major -ge 26
 }
 
+# Ghidra 12 and REA need JDK 21+. Reads `java -version` (stderr); a JAVA_TOOL_OPTIONS "Picked up" line may come first.
+function Test-JdkUsable([string]$Dir) {
+    if (-not $Dir) { return $false }
+    $java = Join-Path (Join-Path $Dir 'bin') 'java.exe'
+    if (-not (Test-Path -LiteralPath $java -PathType Leaf)) { return $false }
+    # Windows PowerShell 5.1 turns redirected native stderr into errors that 'Stop' would make terminating.
+    $ErrorActionPreference = 'Continue'
+    $out = (& $java -version 2>&1 | ForEach-Object { "$_" }) -join "`n"
+    if ($LASTEXITCODE -ne 0 -or $out -notmatch 'version "(\d+)(?:\.(\d+))?') { return $false }
+    $major = [int]$Matches[1]
+    if ($major -eq 1 -and $Matches[2]) { $major = [int]$Matches[2] }  # "1.8.0_402" -> 8
+    return $major -ge 21
+}
+
 function Test-WingetInstalled([string]$Id) {
     winget list --id $Id --exact --accept-source-agreements *> $null
     return $LASTEXITCODE -eq 0
@@ -157,13 +171,25 @@ function Expand-PinnedArchive([string]$Key, [string]$Folder) {
 
 # ---------------------------------------------------------------- install
 
+# Reuses a JAVA_HOME that is JDK 21+; otherwise installs Temurin 21 and points this session and the user at it.
 function Install-Jdk {
-    if ($env:JAVA_HOME) { Log "Using JDK at $env:JAVA_HOME"; return }
+    if ($env:JAVA_HOME -eq '<Temurin JAVA_HOME>') { return }  # dry-run placeholder from an earlier call this run
+    if (Test-JdkUsable $env:JAVA_HOME) { Log "Using JDK at $env:JAVA_HOME"; return }
+    if ($env:JAVA_HOME) {
+        Warn "JAVA_HOME points at $env:JAVA_HOME, which is not JDK 21 or newer; installing the script's own JDK 21."
+    }
     Install-Winget $JdkId
-    # Temurin's installer sets a machine-wide JAVA_HOME; load it into this session for rea setup.
-    $env:JAVA_HOME = [Environment]::GetEnvironmentVariable('JAVA_HOME', 'Machine')
-    if ($DryRun -and -not $env:JAVA_HOME) { $env:JAVA_HOME = '<Temurin JAVA_HOME>' }
-    if (-not $env:JAVA_HOME) { throw "Temurin installed but JAVA_HOME was not set." }
+    if ($DryRun) { $env:JAVA_HOME = '<Temurin JAVA_HOME>'; return }
+    # Install-Winget skips the PATH refresh when Temurin was already installed.
+    Update-SessionPath
+    # Derived from PATH, not the MSI's Machine JAVA_HOME, so it works whether or not the MSI set one.
+    $javaCmd = Get-Command java -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $javaCmd) { throw 'Temurin installed but java is not on PATH.' }
+    $dir = Split-Path (Split-Path $javaCmd.Source)
+    if (-not (Test-JdkUsable $dir)) { throw "Temurin installed but the java on PATH is in $dir, which is not JDK 21 or newer." }
+    # Set-UserEnv leaves an existing user value in place without touching the session, so set the session first.
+    $env:JAVA_HOME = $dir
+    Set-UserEnv 'JAVA_HOME' $dir
 }
 
 function Invoke-Install {

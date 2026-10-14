@@ -23,8 +23,11 @@ rc=0
 
 # Writes an executable stub NAME on the sandbox PATH that runs BODY.
 stub() { printf '#!/bin/sh\n%s\n' "$2" >"$STUBS/$1"; chmod +x "$STUBS/$1"; }
-# Writes a stub JDK: DIR/bin/java runs BODY.
-mkjdk() { mkdir -p "$1/bin"; printf '#!/bin/sh\n%s\n' "$2" >"$1/bin/java"; chmod +x "$1/bin/java"; }
+# Writes a stub JDK: DIR/bin/java runs BODY; bin/java.exe is a copy for the pwsh driver.
+mkjdk() {
+  mkdir -p "$1/bin"; printf '#!/bin/sh\n%s\n' "$2" >"$1/bin/java"; chmod +x "$1/bin/java"
+  cp "$1/bin/java" "$1/bin/java.exe"
+}
 
 # Runs CODE in a subshell with SCRIPT's functions loaded, under the temp HOME and stub PATH.
 # Call it as a plain statement and read $rc after: inside `if` or `||` bash turns set -e off for the whole subshell.
@@ -374,9 +377,14 @@ if need pwsh "Windows checks (pwsh)"; then
   stub rea 'exit 3'
   # shellcheck disable=SC2016  # expanded by the stub
   stub npm 'case "$1" in prefix) echo /nonexistent-npm-prefix ;; *) exit 1 ;; esac'
+  # shellcheck disable=SC2016  # expanded by the stub
+  stub winget 'case "$1" in list) exit 1 ;; *) exit 0 ;; esac'
+  mkjdk "$work/temurin" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
   cat >"$work/w.ps1" <<'EOF'
-param([string]$Script, [string]$Work)
+param([string]$Script, [string]$Work, [string]$Jdks, [string]$Temurin)
 . $Script *> $null
+# On Unix pwsh the Machine and User Path read as empty, so the real one would set PATH to ';'.
+function Update-SessionPath {}
 $ToolsDir = Join-Path $Work 'tools'
 $StateDir = Join-Path $Work 'state'
 $StateFile = Join-Path $StateDir 'installed'
@@ -398,9 +406,21 @@ Set-Content -Path $StateFile -Value 'env:REA_TEST_FAKE_VAR'
 $threw = $false
 try { Invoke-Uninstall *> $null } catch { $threw = $true; Write-Host "caught: $_" }
 Report ((-not $threw) -and -not (Test-Path $StateDir)) 'UNIN-01 Windows uninstall survives a failing rea'
+
+# Set-UserEnv runs for real: on Unix pwsh the User-scope write is a silent no-op, and Add-Record writes to $StateFile.
+$savedPath = $env:PATH
+$env:JAVA_HOME = Join-Path $Jdks '17'
+$env:PATH = (Join-Path $Temurin 'bin') + [IO.Path]::PathSeparator + $env:PATH
+try { Install-Jdk } catch { Write-Host "caught: $_" }
+$ledger = @()
+if (Test-Path $StateFile) { $ledger = @(Get-Content $StateFile) }
+Report (($env:JAVA_HOME -eq $Temurin) -and ($ledger -contains 'env:JAVA_HOME') -and
+        ($ledger -contains 'winget:EclipseAdoptium.Temurin.21.JDK')) 'JAVA-01 Windows Install-Jdk sets JAVA_HOME from the java on PATH and records it'
+$env:PATH = $savedPath
 EOF
   # Temp HOME so pwsh's caches and the script's default folders never touch the real one.
-  PATH="$stub_path" HOME="$work/pwsh-home" pwsh -NoProfile -File "$work/w.ps1" -Script "$WIN" -Work "$work/win" >"$work/out" 2>&1
+  PATH="$stub_path" HOME="$work/pwsh-home" pwsh -NoProfile -File "$work/w.ps1" -Script "$WIN" -Work "$work/win" \
+    -Jdks "$work/jdks" -Temurin "$work/temurin" >"$work/out" 2>&1
   results=false
   while IFS= read -r line; do
     case "$line" in
@@ -413,7 +433,7 @@ EOF
   elif grep -q '^FAIL: ' "$work/out"; then
     grep -v '^PASS: \|^FAIL: ' "$work/out" | sed 's/^/    /'
   fi
-  rm -f "$STUBS/rea" "$STUBS/npm"
+  rm -f "$STUBS/rea" "$STUBS/npm" "$STUBS/winget"
 fi
 
 printf '%d passed, %d failed, %d skipped\n' "$pass" "$fail" "$skip"
