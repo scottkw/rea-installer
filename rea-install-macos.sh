@@ -317,6 +317,8 @@ do_uninstall() {
 
 # ---------------------------------------------------------------- main
 
+# Sourced (by test.sh): stop here so only the functions are defined. Run or piped into bash: fall through to main.
+(return 0 2>/dev/null) && return 0
 cmd="${1:-}"
 [ $# -gt 0 ] && shift
 while (($# > 0)); do
