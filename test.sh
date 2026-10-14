@@ -23,6 +23,8 @@ rc=0
 
 # Writes an executable stub NAME on the sandbox PATH that runs BODY.
 stub() { printf '#!/bin/sh\n%s\n' "$2" >"$STUBS/$1"; chmod +x "$STUBS/$1"; }
+# Writes a stub JDK: DIR/bin/java runs BODY.
+mkjdk() { mkdir -p "$1/bin"; printf '#!/bin/sh\n%s\n' "$2" >"$1/bin/java"; chmod +x "$1/bin/java"; }
 
 # Runs CODE in a subshell with SCRIPT's functions loaded, under the temp HOME and stub PATH.
 # Call it as a plain statement and read $rc after: inside `if` or `||` bash turns set -e off for the whole subshell.
@@ -231,6 +233,32 @@ else
 fi
 # Later checks must not see these; sudo and tar stay.
 rm -f "$STUBS/apt-get" "$STUBS/apt-cache" "$STUBS/dpkg-query" "$STUBS/brew" "$STUBS/npm" "$STUBS/node"
+
+# ---------------------------------------------------------------- JAVA-02 Linux install_jdk
+# Every sandbox sets JAVA_HOME itself: the GitHub ubuntu runner exports its own.
+fresh_home
+mkjdk "$work/jdks/17" "echo 'openjdk version \"17.0.2\" 2022-01-18' >&2"
+mkjdk "$work/jdks/21.0.5" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+# Prints JAVA_HOME and each queued profile line; the [@]+ form because Bash 3.2 errors on an empty array under set -u.
+# shellcheck disable=SC2016  # expanded inside the sandbox
+jdk_report='printf "JAVA_HOME=%s\n" "$JAVA_HOME"; for l in ${profile_lines[@]+"${profile_lines[@]}"}; do printf "line: %s\n" "$l"; done'
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'dry_run=true; export JAVA_HOME="$work/jdks/17"; install_jdk; install_jdk; '"$jdk_report"
+if [ "$rc" -eq 0 ] && [ "$(grep -c 'which is not JDK 21 or newer' "$work/out")" = 1 ] &&
+  [ "$(grep -c 'Would download Temurin 21' "$work/out")" = 1 ] && [ "$(grep -c '^line: export JAVA_HOME=' "$work/out")" = 1 ] &&
+  grep -qxF "JAVA_HOME=$work/home/.rea-installer/jdk" "$work/out"; then
+  ok "JAVA-02 Linux install_jdk replaces a JDK 17 JAVA_HOME with its own"
+else
+  bad "JAVA-02 Linux install_jdk replaces a JDK 17 JAVA_HOME with its own"; show
+fi
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'dry_run=true; export JAVA_HOME="$work/jdks/21.0.5"; install_jdk; '"$jdk_report"
+if [ "$rc" -eq 0 ] && grep -qF "Using JDK at $work/jdks/21.0.5" "$work/out" && grep -qxF "JAVA_HOME=$work/jdks/21.0.5" "$work/out" &&
+  ! grep -q 'Would download Temurin 21' "$work/out" && ! grep -q '^line: export JAVA_HOME=' "$work/out"; then
+  ok "JAVA-02 Linux install_jdk reuses a JDK 21 JAVA_HOME"
+else
+  bad "JAVA-02 Linux install_jdk reuses a JDK 21 JAVA_HOME"; show
+fi
 
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.

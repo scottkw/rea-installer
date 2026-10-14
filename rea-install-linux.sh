@@ -281,6 +281,17 @@ node_supported() {
   ((major == 22 && minor >= 19 || major == 24 && minor >= 15 || major >= 26))
 }
 
+# Ghidra 12 and REA need JDK 21+. Reads `java -version` (stderr); a JAVA_TOOL_OPTIONS "Picked up" line may come first.
+jdk_usable() {
+  local out major re='version "([0-9]+)(\.([0-9]+))?'
+  [ -n "$1" ] && [ -x "$1/bin/java" ] || return 1
+  out="$("$1/bin/java" -version 2>&1)" || return 1
+  [[ "$out" =~ $re ]] || return 1
+  major="${BASH_REMATCH[1]}"
+  [ "$major" = 1 ] && major="${BASH_REMATCH[3]:-0}" # "1.8.0_402" -> 8
+  ((major >= 21))
+}
+
 profile_file() {
   case "$(basename "${SHELL:-}")" in
     zsh) printf '%s/.zshrc' "${ZDOTDIR:-$HOME}" ;;
@@ -317,10 +328,15 @@ install_node() {
 
 # Temurin 21 JDK from Adoptium into ~/.rea-installer/jdk, verified against the checksum Adoptium publishes.
 install_jdk() {
-  if [ -n "${JAVA_HOME:-}" ]; then
+  # do_install unsets inherited $STATE_DIR values, so this only matches the JDK set up earlier in this run (Ghidra, then Android).
+  if [ "${JAVA_HOME:-}" = "$STATE_DIR/jdk" ]; then
+    return
+  fi
+  if jdk_usable "${JAVA_HOME:-}"; then
     log "Using JDK at $JAVA_HOME"
     return
   fi
+  [ -z "${JAVA_HOME:-}" ] || warn "JAVA_HOME points at $JAVA_HOME, which is not JDK 21 or newer; installing the script's own JDK 21."
   if [ ! -d "$STATE_DIR/jdk" ] && [ "$dry_run" = true ]; then
     log "Would download Temurin 21 into $STATE_DIR/jdk"
   elif [ ! -d "$STATE_DIR/jdk" ]; then
@@ -332,6 +348,7 @@ install_jdk() {
     dir="$(unpack "$link $sha" "$release")"
     run mv "$dir" "$STATE_DIR/jdk"
   fi
+  [ "$dry_run" = true ] || jdk_usable "$STATE_DIR/jdk" || die "the downloaded JDK at $STATE_DIR/jdk does not run."
   setting JAVA_HOME "$STATE_DIR/jdk"
 }
 
