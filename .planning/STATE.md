@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Loud Failures, Safe Dry Run, and Regression Tests
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-10-14T16:38:48.969Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-10-14T16:41:37.040Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 01 execution started
-state_head: 864f1c4929523bf9b47eecf77c934ef48a70a187
+state_head: 4591cdbcea7b319d02b187a2a406126bb654ea43
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 ## Current Position
 
 Phase: 01 (Loud Failures, Safe Dry Run, and Regression Tests) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-10-14 — Phase 01 execution started
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 2min | 2 tasks | 4 files |
 | Phase 01 P02 | 3min | 3 tasks | 2 files |
 | Phase 01 P03 | 2min | 2 tasks | 1 files |
+| Phase 01 P04 | 1m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-RED.log committed alone at 3aa4a0e before any installer fix; FAIL-01/02/03 and UNIN-01 checks were shown to go green on scratch-patched copies
 - [Phase 01]: Linux unpack extracts into $TOOLS_DIR/.staging-<name>, renames on success, keeps the verified archive on failure; Rizin and Wakaru use it (tar -xf)
 - [Phase 01]: Linux install_node/install_jdk only log the download under --dry-run; rea setup probes /dev/tty by opening it
+- [Phase 01]: brew_install prints its own failure line because brew's stderr can be empty
+- [Phase 01]: Windows Expand-PinnedArchive stages extracts in .staging-<Folder> and keeps the archive on failure, matching Linux
+- [Phase 01]: A failed rea uninstall is a warning with the same text on macOS, Linux and Windows
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T16:38:48.956Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-10-14T16:41:37.026Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None

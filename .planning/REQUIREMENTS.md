@@ -9,9 +9,9 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 
 ### Failure Handling
 
-- [ ] **FAIL-01**: When extracting a downloaded archive fails (Linux or Windows), the install stops with an error and no partial tool folder is left, so a rerun extracts again (HARD-01)
+- [x] **FAIL-01**: When extracting a downloaded archive fails (Linux or Windows), the install stops with an error and no partial tool folder is left, so a rerun extracts again (HARD-01)
 - [x] **FAIL-02**: When a Linux system package install fails, the install stops with the "X is required" error for required tools, and the failed package is not recorded in the ledger (HARD-02)
-- [ ] **FAIL-03**: When a macOS `brew install` fails, the formula is not recorded and the failure is reported (HARD-02)
+- [x] **FAIL-03**: When a macOS `brew install` fails, the formula is not recorded and the failure is reported (HARD-02)
 
 ### Dry Run
 
@@ -27,7 +27,7 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 
 ### Uninstall
 
-- [ ] **UNIN-01**: When `rea uninstall --purge-data` fails or the `rea` CLI is broken, uninstall warns and still removes every other recorded item on Linux, macOS and Windows (HARD-07)
+- [x] **UNIN-01**: When `rea uninstall --purge-data` fails or the `rea` CLI is broken, uninstall warns and still removes every other recorded item on Linux, macOS and Windows (HARD-07)
 
 ### Testing
 
@@ -72,16 +72,16 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FAIL-01 | Phase 1 | Pending |
+| FAIL-01 | Phase 1 | Complete |
 | FAIL-02 | Phase 1 | Complete |
-| FAIL-03 | Phase 1 | Pending |
+| FAIL-03 | Phase 1 | Complete |
 | DRY-01 | Phase 1 | Complete |
 | DRY-02 | Phase 1 | Complete |
 | JAVA-01 | Phase 2 | Pending |
 | JAVA-02 | Phase 2 | Pending |
 | JAVA-03 | Phase 2 | Pending |
 | JAVA-04 | Phase 2 | Pending |
-| UNIN-01 | Phase 1 | Pending |
+| UNIN-01 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
 | TEST-03 | Phase 1 | Complete |
