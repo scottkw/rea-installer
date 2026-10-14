@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Loud Failures, Safe Dry Run, and Regression Tests
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-10-14T16:34:25.544Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-10-14T16:38:48.969Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 01 execution started
-state_head: 6cd7ef52f7c68d0fb22dfb79358a1159761f8c7c
+state_head: 864f1c4929523bf9b47eecf77c934ef48a70a187
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 ## Current Position
 
 Phase: 01 (Loud Failures, Safe Dry Run, and Regression Tests) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-10-14 — Phase 01 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 01 P01 | 2min | 2 tasks | 4 files |
 | Phase 01 P02 | 3min | 3 tasks | 2 files |
+| Phase 01 P03 | 2min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 01]: test.sh need(): missing tool SKIPs locally, FAILs in CI; docker and shellcheck expected absent on Darwin
 - [Phase 01]: test.sh tar stub is switched by STUB_TAR (fail = partial foo-1.0 then exit 1, else real /usr/bin/tar), shared by bash and pwsh checks
 - [Phase 01]: 01-RED.log committed alone at 3aa4a0e before any installer fix; FAIL-01/02/03 and UNIN-01 checks were shown to go green on scratch-patched copies
+- [Phase 01]: Linux unpack extracts into $TOOLS_DIR/.staging-<name>, renames on success, keeps the verified archive on failure; Rizin and Wakaru use it (tar -xf)
+- [Phase 01]: Linux install_node/install_jdk only log the download under --dry-run; rea setup probes /dev/tty by opening it
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T16:34:25.531Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-10-14T16:38:48.956Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

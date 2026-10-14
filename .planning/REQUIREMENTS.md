@@ -10,13 +10,13 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 ### Failure Handling
 
 - [ ] **FAIL-01**: When extracting a downloaded archive fails (Linux or Windows), the install stops with an error and no partial tool folder is left, so a rerun extracts again (HARD-01)
-- [ ] **FAIL-02**: When a Linux system package install fails, the install stops with the "X is required" error for required tools, and the failed package is not recorded in the ledger (HARD-02)
+- [x] **FAIL-02**: When a Linux system package install fails, the install stops with the "X is required" error for required tools, and the failed package is not recorded in the ledger (HARD-02)
 - [ ] **FAIL-03**: When a macOS `brew install` fails, the formula is not recorded and the failure is reported (HARD-02)
 
 ### Dry Run
 
-- [ ] **DRY-01**: User can run `./rea-install-linux.sh install --dry-run` (including `--with-android`) on a fresh machine with no Node.js and it exits 0 with a printed plan (HARD-03)
-- [ ] **DRY-02**: Linux `install --dry-run` and `uninstall --dry-run` change nothing on disk (no `rm -rf` of `~/.rea-installer/node`, no `rmdir` of `~/.agents`) (HARD-03, HARD-12)
+- [x] **DRY-01**: User can run `./rea-install-linux.sh install --dry-run` (including `--with-android`) on a fresh machine with no Node.js and it exits 0 with a printed plan (HARD-03)
+- [x] **DRY-02**: Linux `install --dry-run` and `uninstall --dry-run` change nothing on disk (no `rm -rf` of `~/.rea-installer/node`, no `rmdir` of `~/.agents`) (HARD-03, HARD-12)
 
 ### Java
 
@@ -73,10 +73,10 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FAIL-01 | Phase 1 | Pending |
-| FAIL-02 | Phase 1 | Pending |
+| FAIL-02 | Phase 1 | Complete |
 | FAIL-03 | Phase 1 | Pending |
-| DRY-01 | Phase 1 | Pending |
-| DRY-02 | Phase 1 | Pending |
+| DRY-01 | Phase 1 | Complete |
+| DRY-02 | Phase 1 | Complete |
 | JAVA-01 | Phase 2 | Pending |
 | JAVA-02 | Phase 2 | Pending |
 | JAVA-03 | Phase 2 | Pending |
