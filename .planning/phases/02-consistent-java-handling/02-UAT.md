@@ -1,5 +1,5 @@
 ---
-status: partial
+status: diagnosed
 phase: 02-consistent-java-handling
 source: [02-VERIFICATION.md]
 started: 2026-10-14T21:42:27Z
@@ -75,29 +75,73 @@ blocked: 2
   reason: "User reported: Go with your recommendation. (decision: fix WR-03 rather than accept it as a known limitation)"
   severity: major
   test: 1
-  artifacts: []
-  missing: []
+  root_cause: "write_profile keeps our JAVA_HOME only when the caller environment already holds our path; the ownership decision (jdk_owned) is made only inside install_ghidra, which a --no-ghidra rerun never reaches (02-REVIEW.md WR-03, reproduced)"
+  artifacts:
+    - path: "rea-install-macos.sh"
+      issue: "write_profile JAVA_HOME clause (~211-219) depends on $JAVA_HOME; jdk_owned used only at ~193-200"
+    - path: "test.sh"
+      issue: "no --no-ghidra rerun case"
+    missing:
+    - "write_profile decides from jdk_owned (ledger brew:openjdk@21 or block export) plus jdk_usable user check, not from the caller environment"
+    - "test: --no-ghidra --with-extras rerun with JAVA_HOME unset keeps our export"
+  debug_session: "02-REVIEW.md (reproduced by gsd-code-reviewer)"
+
 - gap_id: G-02-2
   truth: "Windows rerun with env:JAVA_HOME in the ledger replaces the saved user JAVA_HOME only when it points at a folder that no longer exists, and the log never claims the script set a value it did not (review WR-01)"
   status: failed
   reason: "User reported: Go with your recommendation on any of these. (decision: fix WR-01)"
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Install-Jdk passes -Replace:$owned, where $owned is true whenever the ledger has env:JAVA_HOME, so Set-UserEnv replaces any current user value, and its message says "set by this script earlier" (02-REVIEW.md WR-01, reproduced)"
+  artifacts:
+    - path: "rea-install-windows.ps1"
+      issue: "Install-Jdk ~200-202 and Set-UserEnv ~121-134 message at ~128"
+    - path: "test.sh"
+      issue: "CR-01 case covers only a dead saved value"
+    missing:
+    - "replace only when owned AND the saved value is not an existing folder (Test-Path)"
+    - "accurate log text for the replace"
+    - "test: owned ledger + existing user JDK keeps the user value"
+  debug_session: "02-REVIEW.md (reproduced by gsd-code-reviewer)"
+
 - gap_id: G-02-3
   truth: "Windows -DryRun changes no session or persistent environment variable, including $env:Path (review WR-02, prohibition 02-05 #2)"
   status: failed
   reason: "User reported: Go with your recommendation on any of these. (decision: apply the WR-02 fix)"
   severity: major
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "Install-Winget calls Update-SessionPath unconditionally; Invoke-Step and Add-Record honor -DryRun but the next line rewrites $env:Path; the test driver stubs Update-SessionPath so the dry-run checks cannot see it (02-REVIEW.md WR-02, reproduced)"
+  artifacts:
+    - path: "rea-install-windows.ps1"
+      issue: "Install-Winget"
+    - path: "test.sh"
+      issue: "Update-SessionPath stub ~473"
+    missing:
+    - "`if ($DryRun) { return }` after Invoke-Step in Install-Winget"
+    - "stub sets $script:PathRefreshed; assert it stays $false after the dry-run Install-Jdk case"
+  debug_session: "02-REVIEW.md (reproduced by gsd-code-reviewer)"
+
 - gap_id: G-02-4
   truth: "Every open finding in 02-REVIEW-DISPOSITION.md is fixed or deferred with an accepted reason, and the accepted decisions dropped from 4d8a918 are restored (WR-04, IN-03, IN-04, IN-05 fixed; IN-01, IN-02 deferred)"
   status: failed
   reason: "User reported: Go with your recommendation on any of these. (triage recorded in test 4)"
   severity: major
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "Re-review findings WR-04, IN-03, IN-04, IN-05 open; IN-01/IN-02 not yet dispositioned; the gate dropped the earlier accepted dispositions when the re-review reused their IDs (02-REVIEW.md, 02-REVIEW-DISPOSITION.md, commit 4d8a918)"
+  artifacts:
+    - path: "rea-install-linux.sh"
+      issue: "install_jdk layout check ~360-364 (WR-04); jdk_usable die ~367 (IN-04)"
+    - path: "rea-install-macos.sh"
+      issue: "install_ghidra calls jdk_home before ledger/ghidraRun check ~193-200 (IN-03)"
+    - path: "test.sh"
+      issue: "missing empty-release guard test (IN-05)"
+    - path: ".planning/phases/02-consistent-java-handling/02-REVIEW-DISPOSITION.md"
+      issue: "open rows; dropped accepted rows"
+    missing:
+    - "WR-04: move a nested bin/java dir into place; die message must not promise a rerun recovers"
+    - "IN-03: check ledger/ghidraRun before calling jdk_home"
+    - "IN-04: include java -version output (head -3) in the die"
+    - "IN-05: test the empty-release guard"
+    - "IN-01, IN-02: disposition deferred, accepted (pre-existing no-brew dry-run path, out of phase scope)"
+    - "restore the earlier accepted decisions from 4d8a918 under non-colliding IDs"
+  debug_session: "02-REVIEW.md (reproduced by gsd-code-reviewer)"
