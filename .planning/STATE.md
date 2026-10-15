@@ -2,10 +2,10 @@
 gsd_state_version: "1.0"
 status: Awaiting next milestone
 stopped_at: Phase 03 complete — all phases complete
-last_updated: "2026-10-15T18:05:24.453Z"
+last_updated: "2026-10-15T18:08:56.652Z"
 last_activity: 2026-10-15
 last_activity_desc: Milestone v1 completed and archived
-state_head: 8d870fe9eb703ef75dedf88ea74ed646231414f4
+state_head: a29763c15b9d486abff258cd56a3371bd25fe587
 progress:
   total_phases: 3
   completed_phases: 3
@@ -93,6 +93,7 @@ None.
 |---|-------------|------|--------|-----------|
 | 261015-gjp | Fix macOS Ghidra not found by REA: set GHIDRA_INSTALL_DIR for Homebrew ghidra | 2026-10-15 | 16c2c71 | [261015-gjp-fix-macos-ghidra-not-found-by-rea-set-gh](./quick/261015-gjp-fix-macos-ghidra-not-found-by-rea-set-gh/) |
 | 2 | Set HOMEBREW_NO_ASK=1 so Homebrew 7's prompt cannot hang --yes | 2026-10-15 | 8d870fe | — |
+| 3 | README: macOS VM test results, Linux full-run gap, npm/leftover limitations | 2026-10-15 | a29763c | — |
 
 ## Deferred Items
 
