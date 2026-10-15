@@ -153,15 +153,17 @@ jdk_home() {
 }
 
 # Ownership comes from what the script installed, not the caller's environment (JAVA-04).
-# The ledger is checked first so brew --prefix runs only when an old block exports a JAVA_HOME (IN-03).
+# The ledger is checked first so brew --prefix runs only when the script's own block exports a JAVA_HOME (IN-03, IN-01).
 # Callers use this as an if condition, where set -e is off: `|| exit 1` keeps jdk_home's die fatal.
+# A here-string, not a sed | grep -q pipe: under pipefail, grep exiting at the first match can SIGPIPE sed and fail the match.
 jdk_owned() {
-  local profile ours
+  local profile block ours
   grep -qxF "brew:$JDK_FORMULA" "$STATE_FILE" 2>/dev/null && return 0
   profile="$(profile_file)"
-  grep -q '^export JAVA_HOME=' "$profile" 2>/dev/null || return 1
+  block="$(sed -n "/^$PROFILE_BEGIN\$/,/^$PROFILE_END\$/p" "$profile" 2>/dev/null)" || block=""
+  grep -q '^export JAVA_HOME=' <<<"$block" || return 1
   ours="$(jdk_home)" || exit 1
-  grep -qxF "export JAVA_HOME=\"$ours\"" "$profile"
+  grep -qxF "export JAVA_HOME=\"$ours\"" <<<"$block"
 }
 
 install_jdk() {
