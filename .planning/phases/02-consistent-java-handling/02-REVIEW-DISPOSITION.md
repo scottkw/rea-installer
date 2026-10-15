@@ -107,8 +107,28 @@ findings:
     severity: info
     disposition: deferred
     title: "The Windows Apktool launcher ignores the JDK the script chose"
+  - id: WR-201
+    severity: warning
+    disposition: fixed
+    title: "The CR-01 fix overwrites a `JAVA_HOME` the user chose, and says the script set it"
+  - id: WR-202
+    severity: warning
+    disposition: fixed
+    title: "A Windows dry run still replaces the caller's session `Path`"
+  - id: WR-203
+    severity: warning
+    disposition: fixed
+    title: "On a macOS `--no-ghidra` rerun, the profile's `JAVA_HOME` still depends on the caller's environment"
+  - id: IN-201
+    severity: info
+    disposition: deferred
+    title: "The WR-07 dry-run fallback is unreachable on most Macs without Homebrew"
+  - id: IN-202
+    severity: info
+    disposition: deferred
+    title: "The dry-run fallback warning prints once per `jdk_home` call"
 open: 5
-total: 26
+total: 31
 recorded: 2026-10-15T00:59:53.133Z
 ---
 
@@ -142,6 +162,11 @@ recorded: 2026-10-15T00:59:53.133Z
 | IN-103 | info | deferred | accepted 2026-10-14: a user JAVA_HOME equal to Homebrew's openjdk@21 path is written with the same value; harmless. Restored from 4d8a918, where it was IN-03. (not in the current review) |
 | IN-104 | info | deferred | accepted 2026-10-14: warning wording only. Restored from 4d8a918, where it was IN-04. (not in the current review) |
 | IN-105 | info | deferred | accepted 2026-10-14: pre-existing Apktool launcher behavior outside this phase's JAVA_HOME rule. Restored from 4d8a918, where it was IN-05. (not in the current review) |
+| WR-201 | warning | fixed | fixed in 02-07 (6b0fd4f) Restored from e1ada43, where it was WR-01. |
+| WR-202 | warning | fixed | fixed in 02-07 (8d0cbb5) Restored from e1ada43, where it was WR-02. |
+| WR-203 | warning | fixed | fixed in 02-06 (2fd5825) Restored from e1ada43, where it was WR-03. |
+| IN-201 | info | deferred | accepted 2026-10-14: pre-existing no-brew dry-run path, out of phase scope. Restored from e1ada43, where it was IN-01. |
+| IN-202 | info | deferred | accepted 2026-10-14: pre-existing no-brew dry-run path, out of phase scope. Restored from e1ada43, where it was IN-02. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
