@@ -218,14 +218,27 @@ install_ghidra() {
 }
 
 write_profile() {
-  # Only the script's own JDK goes in the block, and a usable user JAVA_HOME is never written (JAVA-03).
-  # Whether ours stays depends on what the script installed, not on whether the caller's shell sourced the old block (JAVA-04, WR-03).
+  # Ours is written only when install_jdk chose it this run, or the script owns it and it runs; a usable user JAVA_HOME never is (JAVA-03).
+  # A set JAVA_HOME is replaced only with the D-04 warning, and an owned JDK that no longer runs is left out with a warning, the same from any shell (JAVA-04, WR-01, WR-03).
   local owned=false
   jdk_owned && owned=true
   if [ "$jdk_chosen" = true ] || [ "$owned" = true ]; then
     local ours
     ours="$(jdk_home)"
-    if [ "${JAVA_HOME:-}" = "$ours" ] || { [ "$owned" = true ] && ! jdk_usable "${JAVA_HOME:-}" && jdk_usable "$ours"; }; then
+    # When jdk_chosen, install_jdk already checked ours, warned and set JAVA_HOME to it, so the equal-path branch takes it silently.
+    if [ "$jdk_chosen" = false ] && ! jdk_usable "$ours"; then
+      jdk_usable "${JAVA_HOME:-}" ||
+        warn "the script's $JDK_FORMULA at $ours does not run; JAVA_HOME is left out of $(profile_file). Rerun without --no-ghidra to reinstall it."
+      ours=""
+    elif [ "${JAVA_HOME:-}" = "$ours" ]; then
+      :
+    elif [ "$owned" = true ] && ! jdk_usable "${JAVA_HOME:-}"; then
+      [ -z "${JAVA_HOME:-}" ] ||
+        warn "JAVA_HOME points at $JAVA_HOME, which is not JDK 21 or newer; using the script's own JDK 21 at $ours."
+    else
+      ours=""
+    fi
+    if [ -n "$ours" ]; then
       # rea setup in step 9 must see the value the block writes.
       export JAVA_HOME="$ours"
       profile_exports+=("export JAVA_HOME=\"$ours\"")
