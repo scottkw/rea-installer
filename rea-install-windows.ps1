@@ -118,6 +118,7 @@ function Get-UserEnv([string]$Name) {
 }
 
 # Sets a persistent user environment variable (visible to agents started from anywhere) and this session's copy.
+# Callers pass -Replace only when the saved value points at a folder that is gone.
 function Set-UserEnv([string]$Name, [string]$Value, [switch]$Replace) {
     $existing = Get-UserEnv $Name
     if ($existing -eq $Value) { return }
@@ -125,7 +126,7 @@ function Set-UserEnv([string]$Name, [string]$Value, [switch]$Replace) {
         Warn "$Name is already set for your user to $existing; leaving it as-is."
         return
     }
-    if ($existing) { Log "Replacing $Name for your user (was $existing, set by this script earlier)." }
+    if ($existing) { Log "Replacing $Name for your user (was $existing, a folder that no longer exists)." }
     Write-Host "  > setx $Name `"$Value`""
     if ($DryRun) { return }
     Set-Item "env:$Name" $Value
@@ -195,11 +196,15 @@ function Install-Jdk {
     if (-not $javaCmd) { throw 'Temurin installed but java is not on PATH.' }
     $dir = Split-Path (Split-Path $javaCmd.Source)
     if (-not (Test-JdkUsable $dir)) { throw "Temurin installed but the java on PATH is in $dir, which is not JDK 21 or newer." }
-    # Temurin upgrades move the versioned folder, so replace a user value only when our own ledger says we set it
-    # (CR-01). Set-UserEnv leaves any other user value without touching the session, so set the session first.
-    $owned = (Test-Path $StateFile) -and (@(Get-Content $StateFile) -contains 'env:JAVA_HOME')
+    # A Temurin upgrade removes the versioned folder the script saved (CR-01), so a user value is replaced only when
+    # the ledger says the script set it and that folder is gone; a value pointing at a folder that exists is kept,
+    # even if the user changed it (WR-01, D-05). Set-UserEnv leaves any other user value without touching the
+    # session, so the session is set first.
+    $userJava = Get-UserEnv 'JAVA_HOME'
+    $gone = $userJava -and -not (Test-Path -LiteralPath $userJava -PathType Container)
+    $replace = $gone -and (Test-Path $StateFile) -and (@(Get-Content $StateFile) -contains 'env:JAVA_HOME')
     $env:JAVA_HOME = $dir
-    Set-UserEnv 'JAVA_HOME' $dir -Replace:$owned
+    Set-UserEnv 'JAVA_HOME' $dir -Replace:$replace
 }
 
 function Invoke-Install {

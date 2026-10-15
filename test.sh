@@ -643,7 +643,9 @@ $out = @()
 try { $out = @(Install-Jdk *>&1 | ForEach-Object { "$_" }) } catch { Write-Host "caught: $_" }
 Report (($env:JAVA_HOME -eq $Temurin) -and
         @($out | Where-Object { $_.Contains('setx JAVA_HOME') -and $_.Contains($Temurin) }).Count -gt 0 -and
-        @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -eq 0) 'JAVA-01 Windows Install-Jdk replaces a stale user JAVA_HOME it set earlier'
+        @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -eq 0 -and
+        @($out | Where-Object { $_.Contains('no longer exists') }).Count -gt 0 -and
+        @($out | Where-Object { $_.Contains('by this script') }).Count -eq 0) 'JAVA-01 Windows Install-Jdk replaces a stale user JAVA_HOME it set earlier'
 $out | ForEach-Object { Write-Host $_ }
 $env:PATH = $savedPath
 Remove-Item env:REA_TEST_USER_JAVA_HOME -ErrorAction SilentlyContinue
@@ -662,6 +664,22 @@ Report (($env:JAVA_HOME -eq $Temurin) -and
         @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -gt 0 -and
         @($out | Where-Object { $_.Contains('setx JAVA_HOME') }).Count -eq 0 -and
         -not ($ledger -contains 'env:JAVA_HOME')) 'JAVA-01 Windows Install-Jdk leaves a user JAVA_HOME it did not set'
+$out | ForEach-Object { Write-Host $_ }
+$env:PATH = $savedPath
+Remove-Item env:REA_TEST_USER_JAVA_HOME -ErrorAction SilentlyContinue
+
+# The ledger says the script set JAVA_HOME, but the user has since pointed it at a folder that exists, so it is kept (WR-01, D-05).
+$savedPath = $env:PATH
+New-Item -ItemType Directory -Force $StateDir | Out-Null
+Set-Content -Path $StateFile -Value 'env:JAVA_HOME'
+$env:REA_TEST_USER_JAVA_HOME = Join-Path $Jdks '17'
+$env:JAVA_HOME = Join-Path $Work 'gone/jdk-21.0.4.7-hotspot'
+$env:PATH = (Join-Path $Temurin 'bin') + [IO.Path]::PathSeparator + $env:PATH
+$out = @()
+try { $out = @(Install-Jdk *>&1 | ForEach-Object { "$_" }) } catch { Write-Host "caught: $_" }
+Report (($env:JAVA_HOME -eq $Temurin) -and
+        @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -gt 0 -and
+        @($out | Where-Object { $_.Contains('setx JAVA_HOME') }).Count -eq 0) 'JAVA-01 Windows Install-Jdk keeps an existing user JAVA_HOME even when it set one earlier'
 $out | ForEach-Object { Write-Host $_ }
 $env:PATH = $savedPath
 Remove-Item env:REA_TEST_USER_JAVA_HOME -ErrorAction SilentlyContinue
