@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Consistent Java Handling
 status: verifying
 stopped_at: Completed 02-10-PLAN.md
-last_updated: "2026-10-15T02:13:14.362Z"
+last_updated: "2026-10-15T02:48:14.327Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 02 execution started
-state_head: e030ebe2354a930b02127bbbf2167a895d920d5f
+state_head: 232256cc29f45bc68119d9f66d27accf42ccd363
 progress:
   total_phases: 3
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 Phase: 02 (Consistent Java Handling) — EXECUTING
 Plan: 7 of 7
 Status: Phase complete — ready for verification
-Last activity: 2026-10-14 — Phase 02 execution started
+Last activity: 2026-10-14 - Completed quick task 261014-tvi: Fix Linux Picked-up filter and macOS dead owned JAVA_HOME on --no-ghidra rerun
 
 Progress: [███░░░░░░░] 33%
 
@@ -127,6 +127,12 @@ None yet.
 - [Phase 2]: WR-01 — Linux `unpack` nests the tool one folder deep if the JDK archive's top folder name differs; `install_jdk` rework should address it.
 - [Phase 3]: WR-07 — macOS `rea setup </dev/tty` dies without a terminal (MAC-01).
 - [All]: No real macOS/Windows runs this milestone; verification is code analysis, dry runs, lint and Linux containers.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261014-tvi | Fix Linux Picked-up filter and macOS dead owned JAVA_HOME on --no-ghidra rerun | 2026-10-14 | 232256c | [261014-tvi-fix-linux-picked-up-filter-and-macos-dea](./quick/261014-tvi-fix-linux-picked-up-filter-and-macos-dea/) |
 
 ## Deferred Items
 
