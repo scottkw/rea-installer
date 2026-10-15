@@ -26,8 +26,8 @@ These scripts collect all of that into one command per platform, and record ever
 
 | Script | Status |
 |---|---|
-| Linux | **Tested end to end before the current round of fixes:** full install, reinstall and uninstall in Ubuntu 24.04, Fedora 44 and Arch Linux containers. Uninstall removed everything it added, except what the system still needed. The fixes since then are checked by `test.sh` and container dry runs (see [Testing](#testing)). |
-| macOS | **Dry runs and `test.sh` only:** no real install has been run yet |
+| Linux | **Tested end to end before the current round of fixes:** full install, reinstall and uninstall in Ubuntu 24.04, Fedora 44 and Arch Linux containers. Uninstall removed everything it added, except what the system still needed. The fixes since then are checked by `test.sh` and container dry runs only; a new full container run of the current script is planned (see [Testing](#testing)). |
+| macOS | **Tested end to end in a macOS 27 virtual machine** with Homebrew already installed: install, `rea doctor` (Ghidra healthy), a rerun with every option, and uninstall, which left Homebrew and npm exactly as before. Not yet tested on a Mac without Homebrew, or with `rea setup` registering real agents. |
 | Windows (x64 and ARM64) | **Dry runs and `test.sh` only:** parsed, dry-run and function-tested with a stubbed `winget`, but never run on real Windows |
 
 For macOS and Windows, run with `--dry-run` / `-DryRun` first and read the plan. If anything goes wrong, please [open an issue](https://github.com/scottkw/rea-installer/issues) with the output.
@@ -199,7 +199,8 @@ Anything that was on your machine before you ran `install` is left alone.
 
 | Script | Tested on | What was tested |
 |---|---|---|
-| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. `test.sh` loads the script's functions in a sandboxed home with stub commands and checks the profile-block round trip, `node_supported`, JDK selection and `JAVA_HOME` across reruns, failed `brew install` reporting, uninstall with a broken `rea`, the no-terminal prompts and `rea setup` skip, the unattended Homebrew plan, the Homebrew PATH line in the profile block, and clearing the sudo ticket after Homebrew's installer. The JADX checksum against the real download. |
+| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. `test.sh` loads the script's functions in a sandboxed home with stub commands and checks the profile-block round trip, `node_supported`, JDK selection and `JAVA_HOME` across reruns, failed `brew install` reporting, uninstall with a broken `rea`, the no-terminal prompts and `rea setup` skip, the unattended Homebrew plan, the Homebrew PATH line in the profile block, and clearing the sudo ticket after Homebrew's installer. The JADX checksum against the real download. `GHIDRA_INSTALL_DIR` on install, rerun and `--no-ghidra`, and `brew install` running with `HOMEBREW_NO_ASK=1`. |
+| macOS | macOS 27 virtual machine ([Tart](https://github.com/cirruslabs/tart) image `macos-golden-gate-base`: Homebrew and the Command Line Tools preinstalled, no agents) | See below. |
 | Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs as x64 and ARM64 (Ghidra and JADX skipped on ARM64), plus rejection of 32-bit Windows. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. `test.sh` dot-sources the script with a stubbed `winget` and checks failed extraction and rerun, uninstall with a broken `rea`, and `Install-Jdk`'s `JAVA_HOME` handling (reuse, dry run, stale or missing values). |
 | Linux | Docker containers: Ubuntu 24.04 (x64), Fedora 44 (arm64), Arch Linux (x64) | See below. |
 
@@ -212,6 +213,14 @@ The Linux runs used every option, on a frozen read-only copy of the script, and 
    - **Fedora:** the test also installed a package that depends on one of sigrok-cli's dependencies. Uninstall correctly kept that dependency. As expected, it also kept systemd, which Fedora protects.
 
 Those full runs came before the current round of fixes. Since then, the Linux changes are checked by `test.sh` (sourced-function checks) and a fresh `ubuntu:24.04` dry run, not by a new full run.
+
+The macOS virtual machine runs started from a fresh clone each time and went through the same steps:
+
+1. **Dry run,** then **install** with `--yes`, then `rea doctor` in a new login shell. REA reported Ghidra 12.1.4 healthy through the `GHIDRA_INSTALL_DIR` the script set.
+2. **Rerun.** In the first run, the rerun added `--with-android --with-extras`: the extra tools installed, nothing was installed again, and the profile block was replaced in place. A second run, after the Ghidra fix, confirmed that a rerun keeps Ghidra configured.
+3. **Uninstall,** then compare with a snapshot taken before the install. The Homebrew formula and cask lists and the global npm packages matched exactly.
+
+These runs found the two bugs fixed since: REA could not find Homebrew's Ghidra, and Homebrew 7's default install prompt hung `--yes`. The prompt fix was checked by `test.sh`, not by a new VM run.
 
 ### Running the tests
 
@@ -238,8 +247,8 @@ A missing `docker` (a stopped Docker daemon counts as missing), `pwsh` or `shell
 A few checks use BSD or GNU tools and run only on the matching OS, so the two runs report different PASS and SKIP counts.
 
 > **Not yet run on a real machine:**
-> - a full install on macOS (it would have changed the tester's own agent configuration);
-> - an unattended macOS install (`--yes`, or no terminal), including Homebrew's own installer running non-interactively;
+> - a full macOS install with `rea setup` registering real agents, or on a Mac without Homebrew (the script's own Homebrew install);
+> - a full Linux install of the current script (the container runs above predate the latest fixes);
 > - anything on real Windows, including the `winget` installs, the `JAVA_HOME` the script derives from the Temurin it installs, WinLibs putting `objdump` on `PATH`, and the registry check that detects ARM64.
 >
 > Run with `--dry-run` first, and please open an issue if something doesn't work.
@@ -267,6 +276,8 @@ A few checks use BSD or GNU tools and run only on the matching OS, so the two ru
   - On a Mac without Homebrew, a dry run downloads Homebrew's installer, so it needs network access and prints the whole installer as one long line of the plan.
   - When uninstall removes Homebrew, a failed download of Homebrew's uninstaller isn't reported: Homebrew stays and is dropped from the ledger. Under `--yes`, Homebrew's uninstaller still asks its own confirmation question.
 - **Kept without a terminal:** when uninstall runs without a terminal and keeps Hopper, Homebrew or the Xcode Command Line Tools, it still deletes `~/.rea-installer`, so a later uninstall from a terminal can no longer offer to remove them.
+- **npm install scripts:** npm 11 skips install scripts for packages not listed in `allowScripts`. Installing `rea-agents` reports that `frida`'s install script was skipped. `rea doctor` doesn't flag it, and whether any REA feature needs it hasn't been checked.
+- **Leftovers after macOS uninstall:** an empty `~/.zshrc` remains if the script created it, and REA's own uninstall leaves an empty `~/.agents/skills` folder.
 - **Dry run without Node.js (macOS and Windows):** a dry run on a Mac or Windows PC without Node.js stops at the npm step (on a Mac without Homebrew, at the Node.js step) instead of printing the whole plan.
 - **Linux pinned-download layout:** if a pinned download's top-level folder ever differs from the expected name, the tool is unpacked one folder deeper and its setting points at the wrong place; the install does not stop. The JDK is checked and handled.
 - **Linux Rizin and Wakaru folders:** an existing `~/.rea-installer/tools/rizin-0.9.1` or `wakaru-1.14.0` folder is reused without checking the binary inside. If REA can't find Rizin or Wakaru, delete the folder and rerun.
