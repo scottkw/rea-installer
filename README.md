@@ -186,8 +186,8 @@ Anything that was on your machine before you ran `install` is left alone.
 
 | Script | Tested on | What was tested |
 |---|---|---|
-| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. Profile-block removal in a sandboxed home directory. The JADX checksum against the real download. |
-| Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs as x64 and ARM64 (Ghidra and JADX skipped on ARM64), plus rejection of 32-bit Windows. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. |
+| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. `test.sh` loads the script's functions in a sandboxed home with stub commands and checks the profile-block round trip, `node_supported`, JDK selection and `JAVA_HOME` across reruns, failed `brew install` reporting, uninstall with a broken `rea`, the no-terminal prompts and `rea setup` skip, and the unattended Homebrew plan. The JADX checksum against the real download. |
+| Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs as x64 and ARM64 (Ghidra and JADX skipped on ARM64), plus rejection of 32-bit Windows. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. `test.sh` dot-sources the script with a stubbed `winget` and checks failed extraction and rerun, uninstall with a broken `rea`, and `Install-Jdk`'s `JAVA_HOME` handling (reuse, dry run, stale or missing values). |
 | Linux | Docker containers: Ubuntu 24.04 (x64), Fedora 44 (arm64), Arch Linux (x64) | See below. |
 
 The Linux runs used every option, on a frozen read-only copy of the script, and each went through the same steps:
@@ -197,6 +197,32 @@ The Linux runs used every option, on a frozen read-only copy of the script, and 
 3. **Uninstall,** then compare the installed-package list with the one from before the install:
    - **Ubuntu and Arch:** zero packages left over and zero pre-existing packages removed.
    - **Fedora:** the test also installed a package that depends on one of sigrok-cli's dependencies. Uninstall correctly kept that dependency. As expected, it also kept systemd, which Fedora protects.
+
+Those full runs came before the current round of fixes. Since then, the Linux changes are checked by `test.sh` (sourced-function checks) and a fresh `ubuntu:24.04` dry run, not by a new full run.
+
+### Running the tests
+
+`test.sh` is run locally before a release, on a Mac and in a Linux container; nothing runs in hosted CI.
+
+```bash
+# macOS, under the system Bash 3.2:
+/bin/bash ./test.sh
+# Linux, from the repo root:
+docker run --rm --platform linux/amd64 -v "$PWD:/src:ro" -w /src ubuntu:24.04 bash ./test.sh
+```
+
+It covers:
+
+- `bash -n` and `shellcheck` on both bash scripts and on `test.sh`.
+- A PowerShell parse of the Windows script, and a dot-sourced driver for its functions.
+- Sourced-function checks of the bash scripts, with a temporary home and stub commands.
+- A dry run in a fresh `ubuntu:24.04` container with no network, which must leave the home folder unchanged.
+
+It prints one `PASS:`, `FAIL:` or `SKIP:` line per check, then a final count line, and exits with status 1 when any check fails.
+
+A missing `docker` (a stopped Docker daemon counts as missing), `pwsh` or `shellcheck` SKIPs only the checks that need it. On a Mac, a missing `docker` or `shellcheck` is expected and always SKIPs. Otherwise, with `CI=true` set, a missing tool is a FAIL instead, so a run can't pass by skipping.
+
+A few checks use BSD or GNU tools and run only on the matching OS, so the two runs report different PASS and SKIP counts.
 
 > **Not yet run on a real machine:**
 > - a full install on macOS (it would have changed the tester's own agent configuration);
