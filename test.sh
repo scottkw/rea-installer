@@ -592,6 +592,42 @@ fresh_home
 # shellcheck disable=SC2016  # expanded inside the sandbox
 sandbox "$MACOS" 'TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=true; register_agents /x/rea'
 if [ "$rc" -eq 0 ] && grep -qxF '  $ /x/rea setup --yes --all-detected' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+# Asserting the warning, not just a "no", is what makes these fail on the old confirm, which already returned 1 at its call sites.
+for script in "$MACOS" "$LINUX"; do
+  name="$(basename "$script")"
+  n="MAC-01 confirm without a terminal answers no and warns ($name)"
+  fresh_home
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'TTY_PATH="$work/no-tty"; assume_yes=false
+    if confirm "Remove Homebrew (installed by this script)?" Homebrew; then echo yes; else echo no; fi'
+  if [ "$rc" -eq 0 ] && grep -qxF no "$work/out" && grep -qxF 'warning: no terminal available; leaving Homebrew in place.' "$work/out" &&
+    ! grep -qE 'Device not configured|No such device|/dev/tty' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+  n="MAC-01 confirm with a terminal reads the answer ($name)"
+  fresh_home
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'TTY_PATH="$work/tty-yes"; assume_yes=false
+    if confirm "Remove Homebrew (installed by this script)?" Homebrew; then echo yes; else echo no; fi'
+  if grep -qxF yes "$work/out" && ! grep -qF 'no terminal available' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+  n="MAC-01 confirm under --yes answers yes without a terminal ($name)"
+  fresh_home
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'TTY_PATH="$work/no-tty"; assume_yes=true
+    if confirm "Remove Homebrew (installed by this script)?" Homebrew; then echo yes; else echo no; fi'
+  if grep -qxF yes "$work/out" && ! grep -qF 'no terminal available' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+  n="MAC-01 an inherited TTY_PATH cannot pre-answer prompts ($name)"
+  fresh_home
+  export TTY_PATH="$work/tty-yes"
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'printf "TTY_PATH=%s\n" "$TTY_PATH"'
+  unset TTY_PATH
+  if grep -qxF 'TTY_PATH=/dev/tty' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+done
+n="MAC-01 Linux rea setup without a terminal warns and continues"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=false; register_agents /x/rea; echo continued'
+if [ "$rc" -eq 0 ] && grep -qxF "warning: no terminal available; run '/x/rea setup' yourself." "$work/out" &&
+  grep -qxF continued "$work/out" && ! grep -q '^  \$ /x/rea' "$work/out"; then ok "$n"; else bad "$n"; show; fi
 
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.
