@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Consistent Java Handling
 status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-10-15T00:46:24.044Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-10-15T00:50:50.687Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 02 execution started
-state_head: d4021adae03ea0a1b0c69ab99a139889e4bae3ba
+state_head: 43cc7958b4f2ccceccedfeeb05370bdb22032bc2
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 ## Current Position
 
 Phase: 02 (Consistent Java Handling) — EXECUTING
-Plan: 2 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-10-14 — Phase 02 execution started
 
@@ -67,6 +67,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P04 | 7 min | 3 tasks | 3 files |
 | Phase 02 P05 | 4 min | 3 tasks | 3 files |
 | Phase 02 P06 | 4min | 2 tasks | 3 files |
+| Phase 02 P07 | 3min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Accepted review findings are stored as deferred with an 'accepted 2026-10-14:' Source cell, because the disposition gate resets other values to open
 - [Phase 02]: macOS write_profile keeps the script's JAVA_HOME by ownership (ledger brew:openjdk@21 or old block export) plus the usable-user-JDK check, never by the caller's shell (G-02-1)
 - [Phase 02]: Linux install_jdk moves a one-level-deeper Temurin bin/java folder into place; any other layout stops and asks for a report, not a rerun (WR-04)
+- [Phase 02]: Windows replaces a user JAVA_HOME only when the ledger holds env:JAVA_HOME and the saved folder no longer exists (WR-01, D-05)
+- [Phase 02]: Restored review decisions use 3-digit ids WR-101..WR-104 and IN-101..IN-105 so a re-review cannot collide with them
 
 ### Pending Todos
 
@@ -125,6 +128,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T00:46:24.004Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-10-15T00:50:50.641Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
