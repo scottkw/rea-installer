@@ -348,7 +348,7 @@ else
 fi
 # java -version output is shown without Picked up lines, which can hold proxy passwords (02-01 T-02-02).
 fresh_home
-mkjdk "$work/home/.rea-installer/tools/jdk-21.0.5+11" "echo 'Picked up JAVA_TOOL_OPTIONS: -Dhttp.proxyPassword=hunter2' >&2; echo 'Picked up _JAVA_OPTIONS: -Xmx1g' >&2; echo 'Picked up JDK_JAVA_OPTIONS: -Xss2m' >&2; echo 'Error: Could not create the Java Virtual Machine.' >&2; exit 1"
+mkjdk "$work/home/.rea-installer/tools/jdk-21.0.5+11" "echo 'Picked up JAVA_TOOL_OPTIONS: -Xmx1g' >&2; echo 'Picked up _JAVA_OPTIONS: -Xmx1g' >&2; echo 'NOTE: Picked up JDK_JAVA_OPTIONS: -Dhttp.proxyPassword=hunter2' >&2; echo 'Error: Could not create the Java Virtual Machine.' >&2; exit 1"
 sandbox "$LINUX" 'unset JAVA_HOME; install_jdk; echo continued'
 if [ "$rc" -ne 0 ] && grep -qF 'does not run' "$work/out" && grep -qF 'Could not create the Java Virtual Machine' "$work/out" &&
   ! grep -qF 'Picked up' "$work/out" && ! grep -qF hunter2 "$work/out" && ! grep -qx continued "$work/out"; then
