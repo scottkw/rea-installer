@@ -515,6 +515,21 @@ for mode in 'unset JAVA_HOME' "export JAVA_HOME=\"$work/jdks/17\"" "export JAVA_
   fi
 done
 if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; fi
+# A user's own JAVA_HOME line is not proof of ownership and must not need brew --prefix (IN-01).
+n="JAVA-03 macOS jdk_owned ignores a user JAVA_HOME line outside its profile block"
+fresh_home
+# shellcheck disable=SC2016  # a literal user profile line
+printf '%s\n' 'export JAVA_HOME="$(/usr/libexec/java_home -v 21)"' >"$work/home/.bash_profile"
+sandbox "$MACOS" 'unset JAVA_HOME; install_ghidra; profile_exports+=("export REA_TEST=1"); write_profile; echo continued'
+# shellcheck disable=SC2016  # a literal user profile line
+if [ "$rc" -eq 0 ] && grep -qF 'Ghidra already available' "$work/out" && grep -qx continued "$work/out" &&
+  ! grep -qF 'brew --prefix failed' "$work/out" &&
+  grep -qxF 'export JAVA_HOME="$(/usr/libexec/java_home -v 21)"' "$work/home/.bash_profile" &&
+  [ "$(grep -c '^export JAVA_HOME=' "$work/home/.bash_profile")" = 1 ]; then
+  ok "$n"
+else
+  bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+fi
 rm -f "$STUBS/brew" "$STUBS/ghidraRun"
 # A dry run on a Mac without Homebrew plans the default prefix. The PATH leaves out any real brew.
 case "$(uname -m)" in arm64) p=/opt/homebrew ;; *) p=/usr/local ;; esac
