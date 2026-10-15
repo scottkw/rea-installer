@@ -408,7 +408,7 @@ mkdir -p "$work/home/.rea-installer"
 printf 'brew:openjdk@21\n' >"$work/home/.rea-installer/installed"
 # shellcheck disable=SC2016  # expanded inside the sandbox
 sandbox "$MACOS" 'export JAVA_HOME="$work/jdks/21.0.5"; install_ghidra; profile_exports+=("export REA_TEST=1"); write_profile'
-if [ "$rc" -eq 0 ] && grep -qF "Using JDK at $work/jdks/21.0.5" "$work/out" &&
+if [ "$rc" -eq 0 ] && grep -qF "Using JDK at $work/jdks/21.0.5" "$work/out" && ! grep -qF 'does not run' "$work/out" &&
   grep -qx 'export REA_TEST=1' "$work/home/.bash_profile" && ! grep -q '^export JAVA_HOME=' "$work/home/.bash_profile"; then
   ok "JAVA-03 macOS rerun reuses a JDK 21 JAVA_HOME even when it owns openjdk@21"
 else
@@ -455,6 +455,35 @@ if [ "$(uname -s)" = Darwin ]; then
 else
   skip "$n (macOS only)"
 fi
+# WR-01: a set JAVA_HOME is never replaced without the D-04 warning.
+n="JAVA-02 macOS --no-ghidra rerun warns before replacing a JDK 17 JAVA_HOME with its own"
+fresh_home
+mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+mkdir -p "$work/home/.rea-installer"
+printf 'brew:openjdk@21\n' >"$work/home/.rea-installer/installed"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'export JAVA_HOME="$work/jdks/17"; write_profile; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
+if [ "$rc" -eq 0 ] && [ "$(grep -c 'which is not JDK 21 or newer' "$work/out")" = 1 ] && grep -qxF "JAVA_HOME=$ours" "$work/out" &&
+  [ "$(grep -cxF "export JAVA_HOME=\"$ours\"" "$work/home/.bash_profile" 2>/dev/null)" = 1 ]; then
+  ok "$n"
+else
+  bad "$n"; show
+fi
+# WR-03: an owned JDK that does not run is left out the same way from any shell.
+n="JAVA-04 macOS --no-ghidra rerun leaves out an owned JDK that does not run, with a warning"
+all_ok=true
+# shellcheck disable=SC2016  # expanded inside the sandbox
+for mode in 'export JAVA_HOME="$ours"' 'unset JAVA_HOME'; do
+  fresh_home
+  mkdir -p "$work/home/.rea-installer"
+  printf 'brew:openjdk@21\n' >"$work/home/.rea-installer/installed"
+  sandbox "$MACOS" "$mode; profile_exports+=(\"export REA_TEST=1\"); write_profile"
+  if [ "$rc" -ne 0 ] || ! grep -qF 'does not run' "$work/out" || ! grep -qF 'Rerun without --no-ghidra' "$work/out" ||
+    ! grep -qx 'export REA_TEST=1' "$work/home/.bash_profile" 2>/dev/null || grep -q '^export JAVA_HOME=' "$work/home/.bash_profile"; then
+    all_ok=false; printf '    mode: %s\n' "$mode"; show
+  fi
+done
+if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; fi
 fresh_home
 mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
 # shellcheck disable=SC2016  # expanded inside the sandbox
