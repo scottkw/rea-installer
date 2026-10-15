@@ -21,6 +21,8 @@ JADX_SHA256="6e5eacf500b64292bfb73c49797c1958f6ee44646e43e868039ae7feb573ff75"
 JADX_JAR="$STATE_DIR/jadx-headless-mcp-0.7.1-all.jar"
 PROFILE_BEGIN="# >>> rea-installer >>>"
 PROFILE_END="# <<< rea-installer <<<"
+# Internal and assigned unconditionally, so an inherited value cannot pre-answer prompts; test.sh points it elsewhere after sourcing.
+TTY_PATH="/dev/tty"
 
 assume_yes=false
 dry_run=false
@@ -44,6 +46,9 @@ record() {
   mkdir -p "$STATE_DIR"
   grep -qxF "$1" "$STATE_FILE" 2>/dev/null || printf '%s\n' "$1" >>"$STATE_FILE"
 }
+
+# Opening the terminal is the only reliable test; a readable-file test passes in a container that has no terminal.
+have_tty() { (: <"$TTY_PATH") 2>/dev/null; }
 
 confirm() {
   [ "$assume_yes" = true ] && return 0
@@ -263,6 +268,19 @@ write_profile() {
   fi
 }
 
+# Without --yes, no terminal means nobody agreed to register agents, so setup is skipped instead of falling back to --all-detected (D-01).
+register_agents() {
+  local rea_bin="$1"
+  log "Running rea setup"
+  if [ "$assume_yes" = true ]; then
+    run "$rea_bin" setup --yes --all-detected
+  elif have_tty; then
+    run "$rea_bin" setup <"$TTY_PATH"
+  else
+    warn "no terminal available; run '$rea_bin setup' yourself."
+  fi
+}
+
 do_install() {
   [ "$(uname -s)" = Darwin ] || die "this script supports macOS only."
 
@@ -330,12 +348,7 @@ do_install() {
   # 9. Agent registration (+ optional Hopper install, which setup asks about)
   local hopper_before app
   hopper_before="$(hopper_apps)"
-  log "Running rea setup"
-  if [ "$assume_yes" = true ]; then
-    run "$rea_bin" setup --yes --all-detected
-  else
-    run "$rea_bin" setup </dev/tty
-  fi
+  register_agents "$rea_bin"
   while IFS= read -r app; do
     [ -n "$app" ] && ! grep -qxF "$app" <<<"$hopper_before" && record "app:$app"
   done <<<"$(hopper_apps)"
