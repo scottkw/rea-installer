@@ -1,6 +1,6 @@
 ---
 phase: 02-consistent-java-handling
-reviewed: 2026-10-14T22:10:00Z
+reviewed: 2026-10-15T02:17:45Z
 depth: standard
 files_reviewed: 4
 files_reviewed_list:
@@ -9,116 +9,128 @@ files_reviewed_list:
   - rea-install-windows.ps1
   - test.sh
 findings:
-  critical: 0
-  warning: 3
+  critical: 1
+  warning: 2
   info: 2
   total: 5
 status: issues_found
 ---
 
-# Phase 2: Code Review Report (re-review after gap closure 02-06 and 02-07)
+# Phase 2: Code Review Report (re-review after gap closure 02-08, 02-09 and 02-10)
 
-**Reviewed:** 2026-10-14T22:10:00Z
+**Reviewed:** 2026-10-15T02:17:45Z
 **Depth:** standard
 **Files Reviewed:** 4
 **Status:** issues_found
 
 ## Summary
 
-This re-review covers `git diff e1ada43..HEAD` for the four source files: plan 02-06 (commits 2fd5825, d4021ad: macOS `JAVA_HOME` ownership, the nested Linux Temurin layout, and the `java -version` output in the Linux error) and plan 02-07 (commits 6b0fd4f, 8d0cbb5: the Windows "replace only a gone folder" rule and the dry-run `Path` fix). Findings that 02-REVIEW-DISPOSITION.md records as deferred are not raised again.
+This re-review covers `git diff 5e1e32f..HEAD` for the four source files. That is plan 02-08 (the macOS `write_profile` if/elif chain and the block-only `jdk_owned`), plan 02-09 (the Linux `Picked up` filter and the Windows "has no java.exe" replace rule), and plan 02-10 (test.sh comment wording only). Findings that 02-REVIEW-DISPOSITION.md records as deferred are not raised again.
 
-Baseline: `./test.sh` passes on macOS (91 passed, 0 failed, 2 skipped). The new code is Bash 3.2 safe, and every new side effect goes through `run`/`record` or a `$DryRun` guard. Each defect below was reproduced in a scratch sandbox (`/bin/bash` 3.2 or pwsh 7 with the same stubs `test.sh` uses), not inferred.
+Baseline: `/bin/bash ./test.sh` passes on macOS (96 passed, 0 failed, 2 skipped). The new code is Bash 3.2 safe: the here-strings and `BASH_REMATCH` work on 3.2, and there is no `mapfile` or `declare -A`. The Windows change uses only cmdlets that exist in PowerShell 5.1. I reproduced each defect below in a scratch sandbox with a real Homebrew `openjdk@17`, `/bin/bash` 3.2, or pwsh 7.6. None is inferred only.
 
 Status of each prior finding:
 
 | Prior finding | Verdict |
 |---|---|
-| WR-01 (Windows overwrote a user-chosen `JAVA_HOME`) | Fixed for a user value that points at an existing JDK. The new test for "is it gone" checks only that the folder exists, so a leftover Temurin folder brings the CR-01 symptom back. See WR-02. |
-| WR-02 (dry run refreshed the session `Path`) | Fixed. `Install-Winget` returns before `Add-Record`/`Update-SessionPath` in a dry run, and the stub flag makes the test able to fail. |
-| WR-03 (macOS `--no-ghidra` rerun depended on the environment) | Fixed when the owned JDK runs. The new branch replaces a JDK 17 `JAVA_HOME` without the D-04 warning (WR-01). When the owned JDK is gone, the result still depends on the environment (WR-03). |
-| WR-04 (Linux "rerun" advice) | Fixed. The nested layout is now used, and any other layout dies with "report this". |
-| IN-03 (`brew --prefix` needed with Ghidra present) | Fixed for profiles without a `JAVA_HOME` line. The probe matches any user `export JAVA_HOME=` line, not only the block. See IN-01. |
-| IN-04 (no `java -version` output) | Fixed: the final `die` now shows the output. |
-| IN-05 (test gaps) | Fixed: empty release, nested layout, `java -version` output, dry-run `Path`, the owned-but-existing Windows value, and the macOS `--no-ghidra` rerun are now tested. |
-
-No critical issues.
+| WR-01 (macOS replaced a JDK 17 `JAVA_HOME` silently) | Fixed. The D-04 warning is printed once, and the test asserts it. |
+| WR-02 (Windows kept a leftover folder without `java.exe`) | Fixed for the stated case. The new `Join-Path` on the saved value repeats an existing crash on a missing drive (WR-02 below). |
+| WR-03 (macOS dead owned JDK, result depended on the shell) | Only partly fixed. It works only when another export (`--with-extras`) forces the block to be rewritten, which is the only case the test covers. On a plain `--no-ghidra` rerun, the old block keeps the dead `JAVA_HOME`, the warning says the opposite, and `rea setup` still gets the dead value from a shell that sourced the block. See WR-01. |
+| IN-01 (`jdk_owned` matched user lines) | Fixed. The sed range plus here-string avoids the pipefail SIGPIPE trap, and the test runs against a failing `brew` stub, so it can fail. |
+| T-02-02 (credentials in `Picked up` lines, 02-09 G-02-1) | Only partly fixed. Real JDKs prefix `JDK_JAVA_OPTIONS` with `NOTE: `, so the filter misses it. The test uses a made-up format. See CR-01. |
 
 ## Narrative Findings (AI reviewer)
 
+## Critical Issues
+
+### CR-01: The Linux "does not run" error still prints `JDK_JAVA_OPTIONS`, including proxy passwords, because real JDKs prefix that line with `NOTE: `
+
+**File:** `rea-install-linux.sh:379-381`; test at `test.sh:349-358`
+**Issue:** The 02-09 fix (T-02-02, G-02-1) drops lines matching `^Picked up`. The JVM prints that form for `JAVA_TOOL_OPTIONS` and `_JAVA_OPTIONS`. The `java` launcher prints `JDK_JAVA_OPTIONS` differently: `NOTE: Picked up JDK_JAVA_OPTIONS: ...` (`ARG_INFO_ENVVAR` in the launcher). `grep -v '^Picked up'` keeps that line, and because it comes first, `head -3` keeps it too.
+
+Reproduced with a real Homebrew OpenJDK 17:
+```
+$ JDK_JAVA_OPTIONS='-Dhttps.proxyPassword=hunter2 -Xbogus' java -version 2>&1 | grep -v '^Picked up' | head -3
+NOTE: Picked up JDK_JAVA_OPTIONS: -Dhttps.proxyPassword=hunter2 -Xbogus
+Unrecognized option: -Xbogus
+Error: Could not create the Java Virtual Machine.
+```
+I also ran the exact `die` line from `rea-install-linux.sh:381` against a stub JDK that prints the real `NOTE:` form. It printed `error: ... java -version printed: NOTE: Picked up JDK_JAVA_OPTIONS: -Dhttps.proxyPassword=hunter2`. Stopping this credential leak was the purpose of the change, and it still happens for one of the three variables.
+
+The regression test makes this look fixed. `test.sh:351` writes `Picked up JDK_JAVA_OPTIONS: -Xss2m` without the `NOTE: ` prefix, which no real JDK prints. It also puts the fake password only in the `JAVA_TOOL_OPTIONS` line. So the test passes while the real leak is still there.
+**Fix:**
+```bash
+die "the JDK at $STATE_DIR/jdk does not run; java -version printed: $("$STATE_DIR/jdk/bin/java" -version 2>&1 | grep -Ev '^(NOTE: )?Picked up ' | head -3)"
+```
+In `test.sh:351`, emit the real format and put the secret in that line: `echo 'NOTE: Picked up JDK_JAVA_OPTIONS: -Dhttps.proxyPassword=hunter2' >&2`. Also update the comment at line 379 and the `jdk_usable` comments (`rea-install-linux.sh:284`, `rea-install-macos.sh:92`, `rea-install-windows.ps1:85`) to name the `NOTE: Picked up` form.
+
 ## Warnings
 
-### WR-01: A macOS `--no-ghidra` rerun now replaces a JDK 17 `JAVA_HOME` without warning, and the user's own line stops taking effect
+### WR-01: On a plain macOS `--no-ghidra` rerun, a dead owned JDK stays in the profile even though the warning says it was left out, and `rea setup` still receives it
 
-**File:** `rea-install-macos.sh:224-232`
-**Issue:** The second clause added for WR-03 (`owned && ! jdk_usable "$JAVA_HOME" && jdk_usable "$ours"`) also matches a `JAVA_HOME` that is set but is not JDK 21+. Then `write_profile` sets `JAVA_HOME` to ours and writes it in the block, and prints nothing. `install_jdk` takes the same decision but prints the warning that locked decision D-04 requires ("JAVA_HOME points at ..., which is not JDK 21 or newer; installing the script's own JDK 21."). On a `--no-ghidra` run without `--with-android`, `install_jdk` never runs, so there is no warning at all.
+**File:** `rea-install-macos.sh:231-234`, `245-256`; test at `test.sh:481-496`
+**Issue:** Branch 1 of the new chain sets `ours=""` and warns "JAVA_HOME is left out of <profile>". It changes nothing else. Two things then go wrong:
 
-The effect on the profile is larger than the session change. `remove_profile_block` deletes the old block and the new block is appended at the end of the file. A user who added `export JAVA_HOME=<jdk17>` after the block (for other work) had their line win before this rerun. After the rerun, the block comes last and overrides their line in every new shell. Before 02-06 this rerun left `JAVA_HOME` out of the block, so the user's line kept winning.
+1. **The profile is not changed.** `write_profile` rewrites the block only when `profile_exports` is non-empty (line 245). On macOS only `--with-extras` and the `JAVA_HOME` line add entries. A `--no-ghidra` rerun without `--with-extras` therefore leaves the old block alone, and that block still has `export JAVA_HOME="<dead ours>"`. Every new shell keeps getting the dead value, and the warning has just told the user the opposite. The comment at `test.sh:384` already says "without one, write_profile leaves the old block alone". The WR-03 test adds `export REA_TEST=1` in both modes, so it never covers this default rerun.
+2. **The session is not changed.** From a shell that sourced the old block, `JAVA_HOME` is still the dead path after `write_profile`. Step 9 (`rea setup`) copies `JAVA_HOME` into the agent registrations (see the comment in `install_jdk`). From a shell that did not source the block, `JAVA_HOME` is unset. The previous review's WR-03 named this exact case ("`rea setup` copies that dead value into the agent registrations"), and the plan's goal was "the same from any shell". The registrations still depend on the caller's shell.
 
-Reproduced (bash 3.2, `test.sh` brew stub, ledger `brew:openjdk@21`, profile = old block plus a user `export JAVA_HOME=".../jdk17"` after it, session `JAVA_HOME` = that JDK 17): `write_profile` exits 0 and prints only "Adding REA settings". The profile becomes the user's line followed by a block that exports our `JAVA_HOME`, and the session `JAVA_HOME` is now ours. This violates D-04 and the project rule that the machine is never altered silently.
-**Fix:** Split the clause and warn when a set value is replaced, matching `install_jdk`:
+Reproduced (bash 3.2, the `test.sh` brew stub, ledger `brew:openjdk@21`, no JDK under the prefix, profile = old block exporting ours, `write_profile` only):
+```
+== mode: export JAVA_HOME="$ours"
+warning: the script's openjdk@21 at .../Contents/Home does not run; JAVA_HOME is left out of .../.bash_profile. ...
+session JAVA_HOME=.../Contents/Home        <- dead path, passed on to rea setup
+profile: unchanged, still exports JAVA_HOME=".../Contents/Home"
+== mode: unset JAVA_HOME
+(same warning)
+session JAVA_HOME=<unset>
+profile: unchanged, still exports the dead JAVA_HOME
+```
+**Fix:** When branch 1 drops ours, clear the session copy if it is ours, and make sure the old block is removed even when nothing else is queued:
 ```bash
-if [ "${JAVA_HOME:-}" = "$ours" ]; then
-  :
-elif [ "$owned" = true ] && ! jdk_usable "${JAVA_HOME:-}" && jdk_usable "$ours"; then
-  [ -z "${JAVA_HOME:-}" ] ||
-    warn "JAVA_HOME points at $JAVA_HOME, which is not JDK 21 or newer; using the script's own JDK 21 at $ours."
-else
+if [ "$jdk_chosen" = false ] && ! jdk_usable "$ours"; then
+  jdk_usable "${JAVA_HOME:-}" ||
+    warn "the script's $JDK_FORMULA at $ours does not run; JAVA_HOME is left out of $(profile_file). ..."
+  [ "${JAVA_HOME:-}" = "$ours" ] && unset JAVA_HOME
   ours=""
-fi
-if [ -n "$ours" ]; then
-  export JAVA_HOME="$ours"
-  profile_exports+=("export JAVA_HOME=\"$ours\"")
+  drop_block=true
+...
+if ((${#profile_exports[@]} > 0)); then
+  ...
+elif [ "${drop_block:-false}" = true ]; then
+  remove_profile_block "$(profile_file)"
 fi
 ```
-Add a `test.sh` case: ledger `brew:openjdk@21`, `export JAVA_HOME="$work/jdks/17"`, `write_profile` only. Expect the block to export ours and the output to contain `not JDK 21 or newer`.
+Add a test case without `REA_TEST=1`. It should expect no `export JAVA_HOME=` in the profile in both modes, and `JAVA_HOME` unset in the session in both modes.
 
-### WR-02: Windows keeps a dead `JAVA_HOME` when the old Temurin folder is not fully removed, so CR-01 can come back
+### WR-02: A `JAVA_HOME` on a drive that is not available crashes the Windows install with "Cannot find drive"
 
-**File:** `rea-install-windows.ps1:204-207`
-**Issue:** `$gone` is true only when the saved folder is missing (`Test-Path -LiteralPath $userJava -PathType Container`). Windows Installer removes the files it installed, but it does not remove a folder that still holds other files. That happens when files were in use during the upgrade (for example, Ghidra or an IDE was running the old JDK, so deletion waits for a reboot), or when a file was created after install (CDS `.jsa` archives, `hs_err_pid*.log`, a copied `cacerts`). In those cases the folder exists but has no `bin\java.exe`. The rule then keeps the persistent value and warns "leaving it as-is" on every rerun, which is the CR-01 symptom. The earlier review's suggested fix checked for `bin\java.exe` specifically for this reason. The implementation checks the folder instead.
+**File:** `rea-install-windows.ps1:205` (new in 02-09), same pattern at `rea-install-windows.ps1:88`
+**Issue:** `Join-Path` checks that the drive qualifier exists, even though it only builds a string. With `$ErrorActionPreference = 'Stop'`, `Join-Path 'Q:\jdk-17' 'bin'` throws `Cannot find drive. A drive with the name 'Q' does not exist.` (reproduced in pwsh 7.6). `Test-Path -LiteralPath` returns `$false` for the same path. The 02-09 change replaced a `Test-Path -LiteralPath $userJava` that was safe here with `Join-Path (Join-Path $userJava 'bin') 'java.exe'`. Now a saved user `JAVA_HOME` on a missing drive aborts `Install-Jdk` before the ledger check, even when the script never set that value.
 
-Reproduced in pwsh with the `test.sh` driver stubs: the ledger has `env:JAVA_HOME`, the user value points at `leftover/jdk-21.0.4.7-hotspot` (which contains only `lib/`), and Temurin is first on PATH. Output: `JAVA_HOME is already set for your user to .../leftover/jdk-21.0.4.7-hotspot; leaving it as-is.` The session gets Temurin, but every new terminal and every agent started outside this session gets a `JAVA_HOME` with no Java in it.
-**Fix:** Treat the saved value as dead when it has no `java.exe`. A JDK 17 the user chose has one, so WR-01/D-05 still hold:
+`Test-JdkUsable` (line 88, from d69aca5, earlier in this phase) has the same pattern and runs first on the session value, so in most sessions the crash happens there. I extracted `Test-JdkUsable` and called it with `Q:\jdk-17`, and it threw the same error. A realistic trigger is a `JAVA_HOME` on a mapped network drive or a removable disk. Mapped drives are not visible in an elevated PowerShell. In that case the user gets an obscure provider error instead of the D-04 warning and a Temurin install, which breaks "a failure stops loudly with a specific cause" and the D-04 contract.
+**Fix:** Build the path with .NET, which does no drive lookup, in both places:
 ```powershell
-$userJava = Get-UserEnv 'JAVA_HOME'
-$gone = $userJava -and -not (Test-Path -LiteralPath (Join-Path (Join-Path $userJava 'bin') 'java.exe') -PathType Leaf)
+$java = [IO.Path]::Combine($Dir, 'bin', 'java.exe')                       # Test-JdkUsable
+$gone = $userJava -and -not (Test-Path -LiteralPath ([IO.Path]::Combine($userJava, 'bin', 'java.exe')) -PathType Leaf)
 ```
-Update the `Set-UserEnv` comment (line 122) and the log text (line 130) to say "has no java.exe" instead of "no longer exists". Add a driver case with a leftover folder that has `lib/` but no `bin/java.exe`, and expect the `setx` line.
-
-### WR-03: When the owned JDK no longer runs, a macOS `--no-ghidra` rerun either writes a dead `JAVA_HOME` or drops it silently, depending on the caller's shell
-
-**File:** `rea-install-macos.sh:228`
-**Issue:** The first clause, `[ "${JAVA_HOME:-}" = "$ours" ]`, accepts our path without checking that it runs. When `install_jdk` ran in this run (`jdk_chosen=true`), that check already happened. On a `--no-ghidra` rerun it did not happen. Take the ledger case `brew:openjdk@21` where the formula has since been removed (for example, the user removed Ghidra and then `openjdk@21` with brew):
-- From a shell that sourced the old block (`JAVA_HOME` = ours), the block is rewritten with a `JAVA_HOME` that has no Java, and `rea setup` copies that dead value into the agent registrations.
-- From a shell that did not source it, `JAVA_HOME` is dropped without a message.
-
-This is the same machine state giving two different results, which is the defect class WR-03 was meant to close. Neither result warns. Reproduced with the `test.sh` brew stub and no JDK under the prefix: `export JAVA_HOME=<ours>` writes 1 `JAVA_HOME` line, and `unset JAVA_HOME` writes 0. Both exit 0 with no warning.
-**Fix:** Outside `jdk_chosen`, require `jdk_usable "$ours"` for both clauses, and warn when the script owns the JDK but it does not run:
-```bash
-if [ "$jdk_chosen" = false ] && [ "$owned" = true ] && ! jdk_usable "$ours"; then
-  warn "the script's $JDK_FORMULA at $ours does not run; JAVA_HOME is left out of $(profile_file). Rerun without --no-ghidra to reinstall it."
-elif ...
-```
+`[IO.Path]::Combine` with three arguments works in .NET Framework 4.x (PowerShell 5.1) and in .NET (PowerShell 7). Add a driver case with `$env:JAVA_HOME = 'Q:\jdk-17'` that expects the "not JDK 21 or newer" warning, not a throw.
 
 ## Info
 
-### IN-01: `jdk_owned`'s profile probe matches any `export JAVA_HOME=` line, not only the script's block
+### IN-01: The macOS warning tells the user to "Rerun without --no-ghidra", which installs Ghidra they opted out of
 
-**File:** `rea-install-macos.sh:156`, `160-163`; test at `test.sh:477-488`
-**Issue:** The comment says `brew --prefix` runs "only when an old block exports a JAVA_HOME (IN-03)". But `grep -q '^export JAVA_HOME='` and the exact-match `grep -qxF` search the whole profile. Two results follow:
-1. Many macOS users have `export JAVA_HOME=$(/usr/libexec/java_home -v 21)` in their profile. For them, both `install_ghidra` (with Ghidra already present) and every `write_profile` still require `brew --prefix openjdk@21`. Reproduced with a failing brew stub: `install_ghidra` dies with "brew --prefix failed". Real `brew --prefix` fails only for an unknown formula, so the risk is low. The IN-03 test cannot catch this, because none of its cases has a profile.
-2. A user line identical to Homebrew's path counts as ownership, even though the script never chose that JDK. This is mostly harmless: the same value is written again, as in the accepted IN-103.
+**File:** `rea-install-macos.sh:233`
+**Issue:** The ledger can own `openjdk@21` from an earlier `--no-ghidra --with-android` run. If that JDK later stops running, a `--no-ghidra` rerun prints "Rerun without --no-ghidra to reinstall it." Following the advice runs `install_ghidra`, which runs `brew_install ghidra` when Ghidra is not present. That installs a large tool the user explicitly declined, just to repair the JDK. If the formula is still listed but broken, the rerun reaches `brew_install` ("already installed (left as-is)") and then dies with "does not run", so it does not reinstall anything.
+**Fix:** Name the operations that actually repair it, for example "Run `brew reinstall openjdk@21`, or rerun with --with-android or without --no-ghidra."
 
-**Fix:** Search only inside the block: `sed -n "/^$PROFILE_BEGIN\$/,/^$PROFILE_END\$/p" "$profile" | grep ...` for both greps. Add an IN-03 case whose profile contains a user `export JAVA_HOME=...` line.
+### IN-02: `Set-UserEnv` is a generic helper, but its replace message now hard-codes `java.exe`
 
-### IN-02: Dry runs on a machine without npm die at the REA CLI step (pre-existing, outside this phase)
-
-**File:** `rea-install-macos.sh:308`, `rea-install-windows.ps1:266`
-**Issue:** Both scripts run `npm prefix --global` directly, even in a dry run. On a Mac that has Homebrew but no Node, the dry run plans `brew install node` and then exits 127 at `rea_bin="$(npm prefix --global)/bin/rea"`, because a plain assignment passes the failure to `set -e`. On Windows without Node, `npm` is not recognized and `$ErrorActionPreference = 'Stop'` ends the dry run. This is not new in 02-06 or 02-07, and it is not in the AUDIT. It is listed only because the 02-07 dry-run work is near it.
-**Fix:** In a dry run with no npm, use a placeholder prefix (as Linux does with `NPM_PREFIX`). For example, on macOS: `rea_bin="$( { npm prefix --global 2>/dev/null || { [ "$dry_run" = true ] && brew --prefix; }; } )/bin/rea"`. On Windows, guard with `Get-Command npm` and use the `$env:APPDATA\npm` default in a dry run.
+**File:** `rea-install-windows.ps1:122`, `130`
+**Issue:** `Set-UserEnv` also sets `GHIDRA_INSTALL_DIR` and other variables. Only `Install-Jdk` passes `-Replace` today, but the comment and log text ("which has no java.exe") now describe a JAVA_HOME-specific rule inside a generic setter. A future `-Replace` caller would print a wrong reason.
+**Fix:** Pass the reason from the caller (`-Reason 'which has no java.exe'`), or move the replace log line into `Install-Jdk`.
 
 ---
 
-_Reviewed: 2026-10-14T22:10:00Z_
+_Reviewed: 2026-10-15T02:17:45Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
