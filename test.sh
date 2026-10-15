@@ -572,6 +572,27 @@ else
   bad "JAVA-02 macOS dry run without brew plans the default Homebrew JDK path"; show
 fi
 
+# ---------------------------------------------------------------- MAC-01/02 unattended install (no terminal, --yes)
+# Every check sets TTY_PATH after sourcing: "$work/no-tty" does not exist (no terminal), "$work/tty-yes" opens and reads y
+# (a stand-in terminal), so results match from a terminal or an agent. Never call do_install, do_uninstall or load_brew here.
+printf 'y\n' >"$work/tty-yes"
+n="MAC-01 macOS rea setup without a terminal warns and continues"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=false; register_agents /x/rea; echo continued'
+if [ "$rc" -eq 0 ] && grep -qxF "warning: no terminal available; run '/x/rea setup' yourself." "$work/out" &&
+  grep -qxF continued "$work/out" && ! grep -q '^  \$ /x/rea' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+n="MAC-01 macOS rea setup with a terminal runs it interactively"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'TTY_PATH="$work/tty-yes"; dry_run=true; assume_yes=false; register_agents /x/rea'
+if [ "$rc" -eq 0 ] && grep -qxF '  $ /x/rea setup' "$work/out" && ! grep -qF 'no terminal available' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+n="MAC-01 macOS rea setup under --yes registers every detected agent"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=true; register_agents /x/rea'
+if [ "$rc" -eq 0 ] && grep -qxF '  $ /x/rea setup --yes --all-detected' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.
 # Seeded ~/.rea-installer/node and empty ~/.agents/skills must survive. Two runs, so each gets its own line.
