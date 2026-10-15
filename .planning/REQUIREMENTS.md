@@ -45,7 +45,7 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 
 ### Documentation
 
-- [ ] **DOCS-01**: README Status, Testing and Known limitations sections reflect every fix in this milestone (including the new test harness and how to run it locally)
+- [x] **DOCS-01**: README Status, Testing and Known limitations sections reflect every fix in this milestone (including the new test harness and how to run it locally)
 
 ## v2 Requirements
 
@@ -91,7 +91,7 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 | TEST-06 | Phase 1 | Complete |
 | MAC-01 | Phase 3 | Complete |
 | MAC-02 | Phase 3 | Complete |
-| DOCS-01 | Phase 3 | Pending |
+| DOCS-01 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 19 total
