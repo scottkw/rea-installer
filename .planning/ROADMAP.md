@@ -59,7 +59,7 @@ Plans:
   3. On macOS, two `install --with-extras` (or `--with-android`) runs in a row leave exactly one profile block that still exports `JAVA_HOME` pointing at the script's `openjdk@21`
   4. On Windows, after Temurin is installed, `JAVA_HOME` is set for the session to the Temurin 21 folder (derived from the `java` now on PATH) and saved as a user variable that `uninstall` removes, whether or not the MSI set it; confirmed by code review and the `test.sh` PowerShell parse, with real-Windows confirmation deferred to VERI-02
 
-**Plans**: 7/7 plans executed
+**Plans**: 7/10 plans executed
 Plans:
 **Wave 1**
 - [x] 02-01-PLAN.md — Linux tracer: `jdk_usable` (both bash scripts), Linux `install_jdk` reuses only JDK 21+, predicate table and single-JDK dry-run checks
@@ -77,6 +77,11 @@ Plans:
 **Gap closure 2** *(from 02-UAT.md G-02-1..G-02-4 and the 02-REVIEW.md re-review)*
 - [x] 02-06-PLAN.md — Wave 1: macOS `--no-ghidra` rerun keeps its own `JAVA_HOME` by ownership (WR-03), `install_ghidra` checks the ledger before `brew --prefix` (IN-03); Linux handles the nested Temurin layout (WR-04), shows `java -version` output (IN-04), tests the empty-release guard (IN-05)
 - [x] 02-07-PLAN.md — Wave 2: Windows replaces an owned user `JAVA_HOME` only when its folder is gone (WR-01), dry run never refreshes the session `Path` (WR-02); record re-review dispositions and restore the ones dropped from 4d8a918
+
+**Gap closure 3** *(from 02-UAT.md G-02-1..G-02-6)*
+- [ ] 02-08-PLAN.md — Wave 1: macOS `write_profile` warns before replacing a set `JAVA_HOME` (G-02-2) and leaves out an owned JDK that does not run (G-02-3); `jdk_owned` reads only the script's block (G-02-5)
+- [ ] 02-09-PLAN.md — Wave 2: Linux JDK error hides `Picked up` lines (G-02-1); Windows replaces a saved `JAVA_HOME` it set that has no `java.exe` (G-02-4); record the open review dispositions
+- [ ] 02-10-PLAN.md — Wave 3: remove the GitHub Actions workflow and describe testing as local runs (G-02-6)
 
 **Notes**: HARD-04 rests on an unverified assumption about the Temurin MSI's `FeatureJavaHome` default; the fix must work either way. Audit open question worth checking here: whether REA finds Ghidra on macOS without `GHIDRA_INSTALL_DIR` (Homebrew cask install; script never sets it). The macOS JDK decision line (`[ -n "$JAVA_HOME" ] || install_jdk`) is touched by both FAIL-03 (Phase 1) and this phase.
 
