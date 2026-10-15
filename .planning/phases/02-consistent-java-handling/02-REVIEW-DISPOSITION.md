@@ -5,28 +5,28 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: fixed
-    title: "The CR-01 fix overwrites a `JAVA_HOME` the user chose, and says the script set it"
+    disposition: open
+    title: "A macOS `--no-ghidra` rerun now replaces a JDK 17 `JAVA_HOME` without warning, and the user's own line stops taking effect"
   - id: WR-02
     severity: warning
-    disposition: fixed
-    title: "A Windows dry run still replaces the caller's session `Path`"
+    disposition: open
+    title: "Windows keeps a dead `JAVA_HOME` when the old Temurin folder is not fully removed, so CR-01 can come back"
   - id: WR-03
     severity: warning
-    disposition: fixed
-    title: "On a macOS `--no-ghidra` rerun, the profile's `JAVA_HOME` still depends on the caller's environment"
+    disposition: open
+    title: "When the owned JDK no longer runs, a macOS `--no-ghidra` rerun either writes a dead `JAVA_HOME` or drops it silently, depending on the caller's shell"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "`jdk_owned`'s profile probe matches any `export JAVA_HOME=` line, not only the script's block"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "Dry runs on a machine without npm die at the REA CLI step (pre-existing, outside this phase)"
   - id: WR-04
     severity: warning
     disposition: fixed
     title: "The Linux layout-mismatch error says \"rerun\", but a rerun downloads and fails the same way"
-  - id: IN-01
-    severity: info
-    disposition: deferred
-    title: "The WR-07 dry-run fallback is unreachable on most Macs without Homebrew"
-  - id: IN-02
-    severity: info
-    disposition: deferred
-    title: "The dry-run fallback warning prints once per `jdk_home` call"
   - id: IN-03
     severity: info
     disposition: fixed
@@ -107,24 +107,24 @@ findings:
     severity: info
     disposition: deferred
     title: "The Windows Apktool launcher ignores the JDK the script chose"
-open: 0
+open: 5
 total: 26
-recorded: 2026-10-14T21:29:35.701Z
+recorded: 2026-10-15T00:59:53.133Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | fixed | fixed in 02-07 (6b0fd4f) |
-| WR-02 | warning | fixed | fixed in 02-07 (8d0cbb5) |
-| WR-03 | warning | fixed | fixed in 02-06 (2fd5825) |
-| WR-04 | warning | fixed | fixed in 02-06 (d4021ad) |
-| IN-01 | info | deferred | accepted 2026-10-14: pre-existing no-brew dry-run path, out of phase scope. |
-| IN-02 | info | deferred | accepted 2026-10-14: pre-existing no-brew dry-run path, out of phase scope. |
-| IN-03 | info | fixed | fixed in 02-06 (2fd5825) |
-| IN-04 | info | fixed | fixed in 02-06 (d4021ad) |
-| IN-05 | info | fixed | fixed in 02-06 (d4021ad) and 02-07 (8d0cbb5) |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| WR-03 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | open | - |
+| WR-04 | warning | fixed | fixed in 02-06 (d4021ad) (not in the current review) |
+| IN-03 | info | fixed | fixed in 02-06 (2fd5825) (not in the current review) |
+| IN-04 | info | fixed | fixed in 02-06 (d4021ad) (not in the current review) |
+| IN-05 | info | fixed | fixed in 02-06 (d4021ad) and 02-07 (8d0cbb5) (not in the current review) |
 | CR-01 | critical | fixed | fixed in 02-05 (bccc843) (not in the current review) |
 | WR-05 | warning | deferred | accepted 2026-10-14: the ledger stores only the variable name; a JAVA_HOME repointed by the user after install is removed by uninstall; known limitation. (not in the current review) |
 | WR-06 | warning | deferred | accepted 2026-10-14: locked D-01 checks java -version only, so a JRE 21 JAVA_HOME is reused; known limitation. (not in the current review) |
@@ -133,15 +133,15 @@ recorded: 2026-10-14T21:29:35.701Z
 | WR-09 | warning | fixed | fixed in 02-04 (a1f62a6) (not in the current review) |
 | WR-10 | warning | fixed | fixed in 02-05 (e0e8d34) (not in the current review) |
 | IN-06 | info | deferred | accepted 2026-10-14: WR-08 and self-check failure paths are now covered by 02-04 checks; the JRE row is not added because WR-06 is accepted. (not in the current review) |
-| WR-101 | warning | deferred | accepted 2026-10-14: Temurin's bin is expected first on the refreshed PATH and the script stops naming the folder otherwise; real-Windows check is VERI-02. Restored from 4d8a918, where it was WR-01. |
-| WR-102 | warning | deferred | accepted 2026-10-14: the PATH refresh runs only when no JDK 21 JAVA_HOME is usable; session-only Node setups are rare; revisit with VERI-02. Restored from 4d8a918, where it was WR-02. Its dry-run case is fixed separately as WR-02 in 02-07. |
-| WR-103 | warning | fixed | fixed in 02-05 (e0e8d34) Restored from 4d8a918, where it was WR-03. |
-| WR-104 | warning | deferred | accepted 2026-10-14: D-05 keeps a user-set Windows JAVA_HOME while the session and rea setup use JDK 21; candidate for README known limitations. Restored from 4d8a918, where it was WR-04. |
-| IN-101 | info | deferred | accepted 2026-10-14: cosmetic duplicate brew install line in the macOS dry-run plan. Restored from 4d8a918, where it was IN-01. |
-| IN-102 | info | deferred | accepted 2026-10-14: cosmetic duplicate Using JDK log line. Restored from 4d8a918, where it was IN-02. |
-| IN-103 | info | deferred | accepted 2026-10-14: a user JAVA_HOME equal to Homebrew's openjdk@21 path is written with the same value; harmless. Restored from 4d8a918, where it was IN-03. |
-| IN-104 | info | deferred | accepted 2026-10-14: warning wording only. Restored from 4d8a918, where it was IN-04. |
-| IN-105 | info | deferred | accepted 2026-10-14: pre-existing Apktool launcher behavior outside this phase's JAVA_HOME rule. Restored from 4d8a918, where it was IN-05. |
+| WR-101 | warning | deferred | accepted 2026-10-14: Temurin's bin is expected first on the refreshed PATH and the script stops naming the folder otherwise; real-Windows check is VERI-02. Restored from 4d8a918, where it was WR-01. (not in the current review) |
+| WR-102 | warning | deferred | accepted 2026-10-14: the PATH refresh runs only when no JDK 21 JAVA_HOME is usable; session-only Node setups are rare; revisit with VERI-02. Restored from 4d8a918, where it was WR-02. Its dry-run case is fixed separately as WR-02 in 02-07. (not in the current review) |
+| WR-103 | warning | fixed | fixed in 02-05 (e0e8d34) Restored from 4d8a918, where it was WR-03. (not in the current review) |
+| WR-104 | warning | deferred | accepted 2026-10-14: D-05 keeps a user-set Windows JAVA_HOME while the session and rea setup use JDK 21; candidate for README known limitations. Restored from 4d8a918, where it was WR-04. (not in the current review) |
+| IN-101 | info | deferred | accepted 2026-10-14: cosmetic duplicate brew install line in the macOS dry-run plan. Restored from 4d8a918, where it was IN-01. (not in the current review) |
+| IN-102 | info | deferred | accepted 2026-10-14: cosmetic duplicate Using JDK log line. Restored from 4d8a918, where it was IN-02. (not in the current review) |
+| IN-103 | info | deferred | accepted 2026-10-14: a user JAVA_HOME equal to Homebrew's openjdk@21 path is written with the same value; harmless. Restored from 4d8a918, where it was IN-03. (not in the current review) |
+| IN-104 | info | deferred | accepted 2026-10-14: warning wording only. Restored from 4d8a918, where it was IN-04. (not in the current review) |
+| IN-105 | info | deferred | accepted 2026-10-14: pre-existing Apktool launcher behavior outside this phase's JAVA_HOME rule. Restored from 4d8a918, where it was IN-05. (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
