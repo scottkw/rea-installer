@@ -4,10 +4,10 @@ current_phase: 03
 current_phase_name: macOS Unattended Install and README Sync
 status: verifying
 stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-10-15T13:51:35.552Z"
+last_updated: "2026-10-15T14:37:43.876Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 execution started
-state_head: d194c0a53aea83cab84227f36efda059d34c82ec
+state_head: c01378444c3f9d405e917488ab630d65915f0a7d
 progress:
   total_phases: 3
   completed_phases: 2
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 Phase: 03 (macOS Unattended Install and README Sync) — EXECUTING
 Plan: 2 of 2
 Status: Phase complete — ready for verification
-Last activity: 2026-10-15 — Phase 03 execution started
+Last activity: 2026-10-15 - Completed quick task 261015-d2b: Close Phase 3 gaps (Homebrew PATH, sudo -k, README fixes)
 
 Progress: [███████░░░] 67%
 
@@ -140,6 +140,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261014-tvi | Fix Linux Picked-up filter and macOS dead owned JAVA_HOME on --no-ghidra rerun | 2026-10-14 | 232256c | [261014-tvi-fix-linux-picked-up-filter-and-macos-dea](./quick/261014-tvi-fix-linux-picked-up-filter-and-macos-dea/) |
+| 261015-d2b | Close Phase 3 gaps: Homebrew PATH in macOS profile, sudo -k, two README fixes | 2026-10-15 | c013784 | [261015-d2b-close-phase-3-gaps-homebrew-path-in-maco](./quick/261015-d2b-close-phase-3-gaps-homebrew-path-in-maco/) |
 
 ## Deferred Items
 
