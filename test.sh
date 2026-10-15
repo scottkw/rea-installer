@@ -91,14 +91,9 @@ EOF
 fi
 
 # ---------------------------------------------------------------- TEST-02 profile round trip
-# Each script's sed -i form only works on its own OS (GNU vs BSD), so each half runs on its OS.
-for pair in "$LINUX:Linux" "$MACOS:Darwin"; do
-  script="${pair%:*}" os="${pair##*:}"
+# Both scripts run on every OS.
+for script in "$LINUX" "$MACOS"; do
   name="$(basename "$script")"
-  if [ "$(uname -s)" != "$os" ]; then
-    if [ "$os" = Linux ]; then skip "TEST-02 profile round trip ($name) (Linux only)"; else skip "TEST-02 profile round trip ($name) (macOS only)"; fi
-    continue
-  fi
   fresh_home
   # Ends with a newline: a profile without one is a known, deferred bug (the BEGIN marker joins the last line).
   printf '%s\n' 'export EDITOR=vi' 'alias ll="ls -l"' '' 'export PATH=/opt/bin:/usr/bin' >"$work/home/.bashrc"
@@ -248,7 +243,7 @@ else
 fi
 
 # ---------------------------------------------------------------- UNIN-01 bash uninstall
-# Each script's sed -i and tac/tail -r only work on its own OS. The ledger pins npm to the stub, and holds
+# Each script's tac/tail -r only works on its own OS. The ledger pins npm to the stub, and holds
 # only npm: and profile: lines: on a dev Mac load_brew puts the real brew before the stubs.
 unin_home() {
   fresh_home
@@ -427,7 +422,6 @@ stub brew 'case "$1" in --prefix) echo "$HOME/brew/opt/$2" ;; list) exit 0 ;; *)
 # Ghidra already on PATH: install_ghidra takes its "already available" branch, as on a rerun.
 stub ghidraRun 'exit 0'
 ours="$work/home/brew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
-# The second write runs remove_profile_block, which uses BSD sed -i ''.
 if [ "$(uname -s)" = Darwin ]; then
   fresh_home
   mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
@@ -449,7 +443,7 @@ if [ "$(uname -s)" = Darwin ]; then
 else
   skip "JAVA-04 macOS rerun keeps one profile block exporting its own JAVA_HOME (macOS only)"
 fi
-# No existing block below, so no sed -i: these run on every OS. REA_TEST=1 makes sure a block is written at all.
+# These run on every OS. REA_TEST=1 makes sure a block is written at all.
 # A rerun after a failed run: the ledger owns openjdk@21 but no block was written yet.
 fresh_home
 mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
@@ -497,7 +491,7 @@ for mode in 'export JAVA_HOME="$ours"' 'unset JAVA_HOME'; do
   if [ "$rc" -ne 0 ] || [ "$line" != "export JAVA_HOME=\"$ours\"" ]; then all_ok=false; show; fi
 done
 if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; printf '    %s\n' "$got"; fi
-# The old block is the only proof of ownership here; rewriting it uses BSD sed -i ''.
+# The old block is the only proof of ownership here.
 n="JAVA-04 macOS --no-ghidra rerun keeps its own JAVA_HOME owned only through the old block"
 if [ "$(uname -s)" = Darwin ]; then
   fresh_home
@@ -645,7 +639,7 @@ if [ "$rc" -eq 0 ] && grep -qxF "GHIDRA_INSTALL_DIR=$gdir" "$work/out" &&
 else
   bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
 fi
-# The rebuilt block must never drop the line on a rerun; rewriting the old block uses BSD sed -i ''.
+# The rebuilt block must never drop the line on a rerun.
 n="GHID-01 macOS rerun keeps exactly one GHIDRA_INSTALL_DIR line whether or not the shell has it set"
 if [ "$(uname -s)" = Darwin ]; then
   # Homebrew linked ghidraRun into its bin on the first run, so install_ghidra takes its already-available branch.
