@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Consistent Java Handling
 status: executing
-stopped_at: Completed 02-08-PLAN.md
-last_updated: "2026-10-15T02:03:06.399Z"
+stopped_at: Completed 02-09-PLAN.md
+last_updated: "2026-10-15T02:08:21.271Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 02 execution started
-state_head: a2e64c67facfc22ab0dc1f78ce8f9810d0117e07
+state_head: 4dc9f1adc4bbb2a79b554bc5491b6cdd8a256dd8
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
   percent: 33
 ---
 
@@ -69,6 +69,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P06 | 4min | 2 tasks | 3 files |
 | Phase 02 P07 | 3min | 3 tasks | 3 files |
 | Phase 02 P08 | 4min | 2 tasks | 2 files |
+| Phase 02 P09 | 3 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Restored review decisions use 3-digit ids WR-101..WR-104 and IN-101..IN-105 so a re-review cannot collide with them
 - [Phase 02]: macOS write_profile: outside jdk_chosen the owned JDK must run before it is written; a dead owned JDK is left out with a warning, and a set non-21 JAVA_HOME is replaced only with the D-04 warning (WR-01, WR-03)
 - [Phase 02]: macOS jdk_owned counts only the script's own PROFILE_BEGIN..PROFILE_END block as ownership; a user export JAVA_HOME line is ignored (IN-01)
+- [Phase 02]: Linux install_jdk error drops java -version lines starting Picked up before head -3, so proxy credentials are never printed (G-02-1)
+- [Phase 02]: Windows Install-Jdk replaces a ledger-owned user JAVA_HOME when its bin\java.exe is not a file; a value holding a JDK is kept (G-02-4, WR-02)
+- [Phase 02]: Review IN-02 (no-npm dry-run) deferred as accepted, backlog 999.1; Phase 2 review dispositions at open 0
 
 ### Pending Todos
 
@@ -131,6 +135,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T02:03:00.139Z
-Stopped at: Completed 02-08-PLAN.md
+Last session: 2026-10-15T02:08:21.228Z
+Stopped at: Completed 02-09-PLAN.md
 Resume file: None
