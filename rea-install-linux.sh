@@ -426,7 +426,15 @@ register_agents() {
     run "$rea_bin" setup <"$TTY_PATH"
   else
     warn "no terminal available; run '$rea_bin setup' yourself."
+    return 0
   fi
+  [ "$dry_run" = true ] && return 0
+  # setup succeeds even when no agent was ticked, so ask doctor whether any registration landed.
+  # doctor exits non-zero for unrelated health problems; only its output matters here.
+  local regs
+  regs="$("$rea_bin" doctor --format json --filter-output identity.registrations 2>/dev/null || true)"
+  [[ "$regs" == *'"state":"aligned"'* ]] ||
+    warn "no agent is registered with REA; run '$rea_bin setup' and press Space to select your agent(s) before Enter."
 }
 
 do_install() {

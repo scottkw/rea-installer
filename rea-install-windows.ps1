@@ -270,6 +270,14 @@ function Invoke-Install {
     Log 'Running rea setup'
     if ($Yes) { Invoke-Step $rea @('setup', '--yes', '--all-detected') }
     else { Invoke-Step $rea @('setup') }
+    if (-not $DryRun) {
+        # setup succeeds even when no agent was ticked, so ask doctor whether any registration landed.
+        # doctor exits non-zero for unrelated health problems; only its output matters here.
+        $regs = & $rea doctor --format json --filter-output identity.registrations | Out-String
+        if ($regs -notmatch '"state":"aligned"') {
+            Warn "no agent is registered with REA; run '$rea setup' and press Space to select your agent(s) before Enter."
+        }
+    }
 
     Log "Done. Open a new terminal, restart your agent(s), then check health with: $rea doctor"
     if ($isArm64) { Log "On ARM64, 'rea doctor' reports the host as unsupported: REA's Windows support targets x64." }

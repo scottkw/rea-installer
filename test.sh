@@ -768,6 +768,27 @@ fresh_home
 sandbox "$LINUX" 'TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=false; register_agents /x/rea; echo continued'
 if [ "$rc" -eq 0 ] && grep -qxF "warning: no terminal available; run '/x/rea setup' yourself." "$work/out" &&
   grep -qxF continued "$work/out" && ! grep -q '^  \$ /x/rea' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+# The stub rea's setup succeeds without registering anything, like Enter on an empty agent list; doctor prints $work/regs and exits 1.
+# shellcheck disable=SC2016  # expanded by the stub at run time
+stub rea 'case "$1" in doctor) cat "$work/regs"; exit 1 ;; esac'
+for script in "$MACOS" "$LINUX"; do
+  name="$(basename "$script")"
+  n="REG-01 rea setup that registers no agent warns ($name)"
+  fresh_home
+  printf '%s\n' '{"identity":{"registrations":[{"client":"claude_code","state":"missing"}]}}' >"$work/regs"
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'export work; TTY_PATH="$work/tty-yes"; dry_run=false; assume_yes=false; register_agents "$STUBS/rea"; echo continued'
+  if [ "$rc" -eq 0 ] && grep -qF 'warning: no agent is registered with REA' "$work/out" && grep -qxF continued "$work/out"; then
+    ok "$n"; else bad "$n"; show; fi
+  n="REG-01 rea setup that registers an agent does not warn ($name)"
+  fresh_home
+  printf '%s\n' '{"identity":{"registrations":[{"client":"claude_code","state":"aligned"}]}}' >"$work/regs"
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'export work; TTY_PATH="$work/tty-yes"; dry_run=false; assume_yes=false; register_agents "$STUBS/rea"; echo continued'
+  if [ "$rc" -eq 0 ] && ! grep -qF 'no agent is registered' "$work/out" && grep -qxF continued "$work/out"; then
+    ok "$n"; else bad "$n"; show; fi
+done
+rm -f "$STUBS/rea"
 # The PATH leaves out any real brew; curl is stubbed so Homebrew's real installer is never fetched.
 stub curl 'echo "echo brew-installer"'
 n="MAC-02 macOS --yes installs Homebrew with NONINTERACTIVE=1 after sudo -v"
