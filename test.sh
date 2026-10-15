@@ -112,6 +112,42 @@ for pair in "$LINUX:Linux" "$MACOS:Darwin"; do
   fi
 done
 
+# ---------------------------------------------------------------- TEST-04 symlinked profile
+# A dotfiles-managed profile (~/.zshrc -> dotfiles/.zshrc) must stay a link to the same target with its mode.
+link_home() {
+  fresh_home
+  mkdir -p "$work/home/dotfiles"
+  printf '%s\n' 'export EDITOR=vi' '# >>> rea-installer >>>' 'export REA_TEST=1' '# <<< rea-installer <<<' \
+    'alias ll="ls -l"' >"$work/home/dotfiles/.bashrc"
+  chmod 600 "$work/home/dotfiles/.bashrc"
+  ln -s dotfiles/.bashrc "$work/home/.bashrc"
+  cp "$work/home/dotfiles/.bashrc" "$work/profile.before"
+}
+printf '%s\n' 'export EDITOR=vi' 'alias ll="ls -l"' >"$work/profile.ref"
+for script in "$LINUX" "$MACOS"; do
+  name="$(basename "$script")"
+  target="$work/home/dotfiles/.bashrc"
+  link_home
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'remove_profile_block "$HOME/.bashrc"'
+  if [ "$rc" -eq 0 ] && [ -L "$work/home/.bashrc" ] && [ "$(readlink "$work/home/.bashrc")" = dotfiles/.bashrc ] &&
+    cmp -s "$target" "$work/profile.ref" && [ "$(ls -l "$target" | cut -c1-10)" = -rw------- ]; then
+    ok "TEST-04 symlinked profile keeps link and other lines ($name)"
+  else
+    bad "TEST-04 symlinked profile keeps link and other lines ($name)"; sed 's/^/    /' "$work/out"
+    ls -l "$work/home/.bashrc" "$target" 2>&1 | sed 's/^/    /'
+  fi
+  link_home
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  sandbox "$script" 'dry_run=true; remove_profile_block "$HOME/.bashrc"'
+  if [ "$rc" -eq 0 ] && grep -q '\$ cp ' "$work/out" && [ -L "$work/home/.bashrc" ] && cmp -s "$target" "$work/profile.before"; then
+    ok "TEST-04 symlinked profile dry run changes nothing ($name)"
+  else
+    bad "TEST-04 symlinked profile dry run changes nothing ($name)"; sed 's/^/    /' "$work/out"
+    ls -l "$work/home/.bashrc" "$target" 2>&1 | sed 's/^/    /'
+  fi
+done
+
 # ---------------------------------------------------------------- TEST-03 node_supported
 for script in "$LINUX" "$MACOS"; do
   name="$(basename "$script")"
