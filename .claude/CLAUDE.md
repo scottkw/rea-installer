@@ -14,7 +14,7 @@ Three standalone installer scripts — `rea-install-linux.sh`, `rea-install-maco
 - **Compatibility**: `rea-install-linux.sh` may use Bash 4+; Windows script must work on PowerShell 5.1 and 7
 - **Distribution**: each script stays a single self-contained file — users run it via `curl | bash` or a single download
 - **Safety**: dry-run must not change anything; uninstall must not remove anything the script didn't add
-- **Testing**: CI can only exercise Linux containers, shellcheck, and PowerShell parsing — no real macOS/Windows installs in CI
+- **Testing**: all testing is local — `/bin/bash ./test.sh` on macOS (Bash 3.2) and `./test.sh` in a local Linux container (docker); it covers Linux containers, shellcheck and PowerShell parsing, with no real macOS/Windows installs
 
 <!-- GSD:project-end -->
 

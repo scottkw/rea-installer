@@ -36,16 +36,16 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 - [x] **TEST-03**: `test.sh` verifies `node_supported` accepts/rejects a table of Node versions (22.18 no, 22.19 yes, 24.14 no, 24.15 yes, 26.0 yes) (HARD-08)
 - [x] **TEST-04**: `test.sh` runs Linux `install --dry-run` in a fresh `ubuntu:24.04` container and expects exit 0 with no changes (HARD-08)
 - [x] **TEST-05**: `test.sh` includes checks that fail before and pass after the FAIL-01, FAIL-02 and DRY-01 fixes (HARD-08)
-- [x] **TEST-06**: GitHub Actions runs `test.sh` on every push and pull request (HARD-08)
+- [x] **TEST-06**: `test.sh` runs locally before release: `/bin/bash ./test.sh` on macOS (Bash 3.2) and `./test.sh` in a local Linux container (docker); no GitHub Actions (revised 2026-10-14 by user decision) (HARD-08)
 
 ### macOS Polish
 
-- [ ] **MAC-01**: macOS `install` without a terminal (CI, non-tty ssh) warns to run `rea setup` manually instead of failing (HARD-09)
+- [ ] **MAC-01**: macOS `install` without a terminal (non-tty ssh, a script or an agent) warns to run `rea setup` manually instead of failing (HARD-09)
 - [ ] **MAC-02**: macOS `install --yes` on a Mac without Homebrew installs Homebrew without waiting for Return (HARD-10)
 
 ### Documentation
 
-- [ ] **DOCS-01**: README Status, Testing and Known limitations sections reflect every fix in this milestone (including the new test harness and CI)
+- [ ] **DOCS-01**: README Status, Testing and Known limitations sections reflect every fix in this milestone (including the new test harness and how to run it locally)
 
 ## v2 Requirements
 
@@ -66,7 +66,8 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 | Real-hardware verification in this milestone | User decision: fix from code analysis; tracked as v2 VERI-01/02 |
 | Binwalk, Unblob, pwndbg | No prebuilt binaries / many separately pinned paths; feature work, not hardening |
 | Shared helper library across the bash scripts | Each script must stay standalone for `curl \| bash` |
-| Real macOS/Windows installs in CI | CI runners can't safely exercise agent registration and system installs; Linux containers + lint only |
+| Real macOS/Windows installs in automated tests | Test runs can't safely exercise agent registration and system installs; local Linux containers + lint only |
+| GitHub Actions or other hosted CI | User decision 2026-10-14: all testing is local |
 
 ## Traceability
 

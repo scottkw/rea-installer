@@ -26,7 +26,7 @@ Installing and uninstalling must never leave the user's machine in a silently br
 - ✓ Failed package installs stop the install and are not recorded (HARD-02) — Phase 1
 - ✓ Linux `--dry-run` succeeds on a fresh machine and changes nothing (HARD-03, HARD-12) — Phase 1
 - ✓ Uninstall completes even when the `rea` CLI is broken (HARD-07) — Phase 1
-- ✓ Repeatable `test.sh`, run locally and in GitHub Actions (HARD-08) — Phase 1
+- ✓ Repeatable `test.sh`, run locally (HARD-08) — Phase 1; GitHub Actions removed by user decision in Phase 2
 
 ### Active
 
@@ -52,7 +52,7 @@ Installing and uninstalling must never leave the user's machine in a silently br
 - Findings source: `.planning/AUDIT.md` (`/ponytail-audit` + `/code-review high`, 2026-10-14). Each HARD item has location, scenario, fix and acceptance check.
 - Root cause behind HARD-01/02: bash turns `set -e` off inside `$(...)` and inside functions called on the left of `||`/`&&` or in an `if`. Verified under bash 3.2.57.
 - README status: Linux tested end to end in containers; macOS and Windows dry runs only.
-- `test.sh` (bash 3.2 and 5, ubuntu:24.04 container, pwsh parse) runs locally and in GitHub Actions on linux and macos (Phase 1).
+- `test.sh` (bash 3.2 and 5, ubuntu:24.04 container, pwsh parse) runs locally: `/bin/bash ./test.sh` on macOS and `./test.sh` in a Linux container. No GitHub Actions (removed in Phase 2 by user decision).
 - Known limitations accepted in Phase 1: WR-01 (unpack layout mismatch), WR-02 (Rizin/Wakaru trust an existing folder), WR-05 (partial package install records no deps) — see 01-REVIEW-DISPOSITION.md.
 
 ## Constraints
@@ -61,7 +61,7 @@ Installing and uninstalling must never leave the user's machine in a silently br
 - **Compatibility**: `rea-install-linux.sh` may use Bash 4+; Windows script must work on PowerShell 5.1 and 7
 - **Distribution**: each script stays a single self-contained file — users run it via `curl | bash` or a single download
 - **Safety**: dry-run must not change anything; uninstall must not remove anything the script didn't add
-- **Testing**: CI can only exercise Linux containers, shellcheck, and PowerShell parsing — no real macOS/Windows installs in CI
+- **Testing**: all testing is local — `/bin/bash ./test.sh` on macOS (Bash 3.2) and `./test.sh` in a local Linux container (docker); it covers Linux containers, shellcheck and PowerShell parsing, with no real macOS/Windows installs
 
 ## Key Decisions
 
@@ -69,7 +69,8 @@ Installing and uninstalling must never leave the user's machine in a silently br
 |----------|-----------|---------|
 | Scope milestone to AUDIT.md HARD-01..12 | Concrete, verified findings with acceptance checks | — Pending |
 | Fix macOS/Windows from code analysis, not real-hardware verification | No real-machine run in this milestone; tracked separately | — Pending |
-| `test.sh` runs locally and in GitHub Actions | Catch regressions on every push, not just before release | ✓ Good — CI green on both jobs (Phase 1) |
+| `test.sh` runs locally and in GitHub Actions | Catch regressions on every push, not just before release | Superseded 2026-10-14: GitHub Actions removed; see the next row |
+| No GitHub Actions; all testing is local | User decision at Phase 2 UAT | ✓ Good |
 | Accept WR-01, WR-02, WR-05 as known limitations | UAT decision; fix cost outweighed risk before Phase 2 | — Pending |
 | README kept in sync with each fix | README makes specific status/limitation claims users rely on | — Pending |
 | One "reuse JDK ≥21, else install our own" rule on all platforms | Linux trusts any JAVA_HOME, macOS overrides it — make them consistent | — Pending |

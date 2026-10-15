@@ -2,7 +2,7 @@
 
 ## Overview
 
-This milestone hardens the three existing installer scripts so they never leave a machine silently broken. First, a repeatable `test.sh` and CI go in alongside the failure-handling fixes. The regression checks are written red against the current scripts, then turned green by making extraction and package-install failures stop loudly, making Linux dry runs truly side-effect-free, and letting uninstall finish even when the `rea` CLI is broken. Second, all three platforms adopt one Java rule ("reuse JDK 21 or newer, else install our own") and keep `JAVA_HOME` across reruns. Last, the macOS script runs unattended under `--yes` or without a terminal, and the README is brought in line with everything that changed. macOS and Windows fixes are verified by code analysis, dry runs and lint, not by real-machine runs (deferred to v2 VERI-01/02).
+This milestone hardens the three existing installer scripts so they never leave a machine silently broken. First, a repeatable `test.sh`, run locally, goes in alongside the failure-handling fixes. The regression checks are written red against the current scripts, then turned green by making extraction and package-install failures stop loudly, making Linux dry runs truly side-effect-free, and letting uninstall finish even when the `rea` CLI is broken. Second, all three platforms adopt one Java rule ("reuse JDK 21 or newer, else install our own") and keep `JAVA_HOME` across reruns. Last, the macOS script runs unattended under `--yes` or without a terminal, and the README is brought in line with everything that changed. macOS and Windows fixes are verified by code analysis, dry runs and lint, not by real-machine runs (deferred to v2 VERI-01/02).
 
 ## Phases
 
@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: FAIL-01, FAIL-02, FAIL-03, DRY-01, DRY-02, UNIN-01, TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06
 **Success Criteria** (what must be TRUE):
-  1. Maintainer runs `./test.sh` locally and it passes: `shellcheck` and `bash -n` on both bash scripts, a PowerShell parse of the Windows script, a profile-block add-then-remove that leaves a sample profile byte-identical, and the `node_supported` table (22.18 no, 22.19 yes, 24.14 no, 24.15 yes, 26.0 yes); GitHub Actions runs the same `test.sh` on every push and pull request
+  1. Maintainer runs `./test.sh` locally and it passes: `shellcheck` and `bash -n` on both bash scripts, a PowerShell parse of the Windows script, a profile-block add-then-remove that leaves a sample profile byte-identical, and the `node_supported` table (22.18 no, 22.19 yes, 24.14 no, 24.15 yes, 26.0 yes); GitHub Actions runs the same `test.sh` on every push and pull request (workflow removed 2026-10-14 by user decision in 02-10; all testing is local)
   2. `./rea-install-linux.sh install --dry-run --with-android` in a fresh `ubuntu:24.04` container with no Node.js exits 0 with a printed plan, and Linux `install --dry-run` / `uninstall --dry-run` leave `~/.rea-installer/node` and an empty `~/.agents/skills` in place
   3. A forced archive-extraction failure (Linux `unpack`, Windows `Expand-PinnedArchive`) exits non-zero, leaves no partial tool folder, and a rerun extracts again; a failed Linux package install stops with the "X is required" error and writes no `pkg:X` ledger entry; a failed macOS `brew install` is reported and the formula is not recorded
   4. `test.sh` contains checks for the FAIL-01, FAIL-02 and DRY-01 behaviors that were run and seen failing against the unfixed scripts, and pass after the fixes
@@ -87,14 +87,14 @@ Plans:
 
 ### Phase 3: macOS Unattended Install and README Sync
 
-**Goal**: The macOS installer completes unattended (no terminal, or `--yes` on a Mac without Homebrew), and the README's Status, Testing and Known limitations sections accurately describe every fix, the new test harness and CI
+**Goal**: The macOS installer completes unattended (no terminal, or `--yes` on a Mac without Homebrew), and the README's Status, Testing and Known limitations sections accurately describe every fix and the new test harness, including how to run it locally
 **Mode:** mvp
 **Depends on**: Phase 2
 **Requirements**: MAC-01, MAC-02, DOCS-01
 **Success Criteria** (what must be TRUE):
-  1. macOS `install` run without a terminal (CI, non-tty ssh) prints a warning telling the user to run `rea setup` manually instead of failing
+  1. macOS `install` run without a terminal (non-tty ssh, a script or an agent) prints a warning telling the user to run `rea setup` manually instead of failing
   2. macOS `install --yes` on a Mac without Homebrew runs the Homebrew installer non-interactively and never waits for Return
-  3. README Status, Testing and Known limitations sections list each fix from this milestone, describe `./test.sh` and the GitHub Actions run, and still state that macOS and Windows are verified by dry run and lint only (real-machine runs pending)
+  3. README Status, Testing and Known limitations sections list each fix from this milestone, describe running `./test.sh` locally (`/bin/bash ./test.sh` on macOS, `./test.sh` in a Linux container), and still state that macOS and Windows are verified by dry run and lint only (real-machine runs pending)
 
 **Plans**: TBD
 
