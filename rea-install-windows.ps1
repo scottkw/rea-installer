@@ -119,7 +119,7 @@ function Get-UserEnv([string]$Name) {
 }
 
 # Sets a persistent user environment variable (visible to agents started from anywhere) and this session's copy.
-# Callers pass -Replace only when the saved value points at a folder that is gone.
+# Callers pass -Replace only when the saved value has no java.exe.
 function Set-UserEnv([string]$Name, [string]$Value, [switch]$Replace) {
     $existing = Get-UserEnv $Name
     if ($existing -eq $Value) { return }
@@ -127,7 +127,7 @@ function Set-UserEnv([string]$Name, [string]$Value, [switch]$Replace) {
         Warn "$Name is already set for your user to $existing; leaving it as-is."
         return
     }
-    if ($existing) { Log "Replacing $Name for your user (was $existing, a folder that no longer exists)." }
+    if ($existing) { Log "Replacing $Name for your user (was $existing, which has no java.exe)." }
     Write-Host "  > setx $Name `"$Value`""
     if ($DryRun) { return }
     Set-Item "env:$Name" $Value
@@ -197,12 +197,12 @@ function Install-Jdk {
     if (-not $javaCmd) { throw 'Temurin installed but java is not on PATH.' }
     $dir = Split-Path (Split-Path $javaCmd.Source)
     if (-not (Test-JdkUsable $dir)) { throw "Temurin installed but the java on PATH is in $dir, which is not JDK 21 or newer." }
-    # A Temurin upgrade removes the versioned folder the script saved (CR-01), so a user value is replaced only when
-    # the ledger says the script set it and that folder is gone; a value pointing at a folder that exists is kept,
-    # even if the user changed it (WR-01, D-05). Set-UserEnv leaves any other user value without touching the
-    # session, so the session is set first.
+    # A Temurin upgrade removes the versioned folder the script saved (CR-01), and the MSI can leave it behind without
+    # java.exe (WR-02), so a user value is replaced only when the ledger says the script set it and the saved folder
+    # has no bin\java.exe; a value that holds a JDK is kept, even if the user changed it (WR-01, D-05).
+    # Set-UserEnv leaves any other user value without touching the session, so the session is set first.
     $userJava = Get-UserEnv 'JAVA_HOME'
-    $gone = $userJava -and -not (Test-Path -LiteralPath $userJava -PathType Container)
+    $gone = $userJava -and -not (Test-Path -LiteralPath (Join-Path (Join-Path $userJava 'bin') 'java.exe') -PathType Leaf)
     $replace = $gone -and (Test-Path $StateFile) -and (@(Get-Content $StateFile) -contains 'env:JAVA_HOME')
     $env:JAVA_HOME = $dir
     Set-UserEnv 'JAVA_HOME' $dir -Replace:$replace
