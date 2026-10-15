@@ -637,12 +637,15 @@ sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/tty-yes"; dry_run
 s="$(grep -nxF '  $ sudo -v' "$work/out" | cut -d: -f1)"
 e="$(grep -n '^  \$ env NONINTERACTIVE=1 /bin/bash -c ' "$work/out" | head -1 | cut -d: -f1)"
 if [ "$rc" -eq 0 ] && [ -n "$s" ] && [ -n "$e" ] && [ "$s" -lt "$e" ] && grep -qxF continued "$work/out"; then ok "$n"; else bad "$n"; show; fi
+n="MAC-02 macOS --yes clears the sudo ticket after Homebrew's installer"
+k="$(grep -nxF '  $ sudo -k' "$work/out" | cut -d: -f1)"
+if [ "$rc" -eq 0 ] && [ -n "$e" ] && [ -n "$k" ] && [ "$e" -lt "$k" ]; then ok "$n"; else bad "$n"; show; fi
 n="MAC-02 macOS --yes without a terminal skips sudo -v"
 fresh_home
 # shellcheck disable=SC2016  # expanded inside the sandbox
 sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=true; install_homebrew; echo continued'
 if [ "$rc" -eq 0 ] && grep -q '^  \$ env NONINTERACTIVE=1 /bin/bash -c ' "$work/out" && ! grep -qxF '  $ sudo -v' "$work/out" &&
-  grep -qxF continued "$work/out"; then ok "$n"; else bad "$n"; show; fi
+  ! grep -qxF '  $ sudo -k' "$work/out" && grep -qxF continued "$work/out"; then ok "$n"; else bad "$n"; show; fi
 n="MAC-02 macOS Homebrew without --yes is not forced non-interactive"
 fresh_home
 # shellcheck disable=SC2016  # expanded inside the sandbox
@@ -683,6 +686,15 @@ fresh_home
 # shellcheck disable=SC2016  # expanded inside the sandbox
 sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/no-tty"; dry_run=false; assume_yes=true; install_homebrew; echo continued'
 if [ "$rc" -ne 0 ] && grep -qxF "error: Homebrew install failed; it needs sudo. Run 'sudo -v' and rerun, or install Homebrew first." "$work/out" &&
+  ! grep -qxF continued "$work/out" && ! grep -qx homebrew "$work/home/.rea-installer/installed" 2>/dev/null; then ok "$n"; else bad "$n"; show; fi
+n="MAC-02 macOS --yes clears the sudo ticket when Homebrew's installer fails"
+fresh_home
+# A sandbox function, so the shared sudo stub on PATH stays as later checks expect.
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/tty-yes"; dry_run=false; assume_yes=true
+  sudo() { printf "sudo-called %s\n" "$*"; }; install_homebrew; echo continued'
+if [ "$rc" -ne 0 ] && grep -qxF 'sudo-called -k' "$work/out" &&
+  grep -qxF "error: Homebrew install failed; it needs sudo. Run 'sudo -v' and rerun, or install Homebrew first." "$work/out" &&
   ! grep -qxF continued "$work/out" && ! grep -qx homebrew "$work/home/.rea-installer/installed" 2>/dev/null; then ok "$n"; else bad "$n"; show; fi
 stub curl 'exit 22'
 n="MAC-02 macOS failed Homebrew download stops and records nothing"

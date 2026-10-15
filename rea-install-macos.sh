@@ -238,11 +238,18 @@ install_homebrew() {
     die "could not download the Homebrew installer."
   if [ "$assume_yes" = true ]; then
     # Homebrew checks sudo with -n when non-interactive, so cache a ticket while a terminal can still ask for it.
+    local cached=false rc=0
     if have_tty; then
       run sudo -v || die "$hint"
+      cached=true
     fi
     # run execs its arguments, so the variable goes through env rather than a leading assignment.
-    run env NONINTERACTIVE=1 /bin/bash -c "$script" || die "$hint"
+    run env NONINTERACTIVE=1 /bin/bash -c "$script" || rc=$?
+    # Homebrew clears the ticket on exit only when none was cached before it started, so ours would stay live while npm and rea setup run.
+    if [ "$cached" = true ]; then
+      run sudo -k || warn "could not clear the cached sudo ticket; run 'sudo -k' yourself."
+    fi
+    ((rc == 0)) || die "$hint"
   else
     run /bin/bash -c "$script" || die "$hint"
   fi
