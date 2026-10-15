@@ -22,6 +22,8 @@ PACKAGE="rea-agents"
 PROFILE_BEGIN="# >>> rea-installer >>>"
 PROFILE_END="# <<< rea-installer <<<"
 HOPPER_LAUNCHER="/opt/hopper/bin/Hopper"
+# Internal and assigned unconditionally, so an inherited value cannot pre-answer prompts; test.sh points it elsewhere after sourcing.
+TTY_PATH="/dev/tty"
 
 # Pinned downloads: "url sha256". JADX and Wakaru are pinned by REA's docs; the rest by their GitHub release digests.
 GHIDRA="https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db"
@@ -59,10 +61,18 @@ record() {
   grep -qxF "$1" "$STATE_FILE" 2>/dev/null || printf '%s\n' "$1" >>"$STATE_FILE"
 }
 
+# Opening the terminal is the only reliable test; a readable-file test passes in a container that has no terminal.
+have_tty() { (: <"$TTY_PATH") 2>/dev/null; }
+
+# Usage: confirm QUESTION ITEM. Without a terminal the [y/N] default holds and the warning names ITEM (D-02).
 confirm() {
   [ "$assume_yes" = true ] && return 0
+  if ! have_tty; then
+    warn "no terminal available; leaving $2 in place."
+    return 1
+  fi
   local reply
-  read -r -p "$1 [y/N] " reply </dev/tty
+  read -r -p "$1 [y/N] " reply <"$TTY_PATH"
   [[ "$reply" =~ ^[Yy] ]]
 }
 
@@ -401,6 +411,19 @@ make_venv() {
   run "$uv_dir/uv" pip install -q --python "$STATE_DIR/venvs/$name/bin/python" "$@"
 }
 
+# Without --yes, no terminal means nobody agreed to register agents, so setup is skipped instead of falling back to --all-detected (D-01).
+register_agents() {
+  local rea_bin="$1"
+  log "Running rea setup"
+  if [ "$assume_yes" = true ]; then
+    run "$rea_bin" setup --yes --all-detected
+  elif have_tty; then
+    run "$rea_bin" setup <"$TTY_PATH"
+  else
+    warn "no terminal available; run '$rea_bin setup' yourself."
+  fi
+}
+
 do_install() {
   [ "$(uname -s)" = Linux ] || die "this script supports Linux only."
   case "$(arch)" in x64|arm64) ;; *) die "unsupported architecture $(uname -m)." ;; esac
@@ -536,14 +559,7 @@ do_install() {
   # 9. Agent registration (+ optional Hopper install, which setup asks about and installs with sudo)
   local had_hopper=false
   [ -x "$HOPPER_LAUNCHER" ] && had_hopper=true
-  log "Running rea setup"
-  if [ "$assume_yes" = true ]; then
-    run "$rea_bin" setup --yes --all-detected
-  elif (: </dev/tty) 2>/dev/null; then
-    run "$rea_bin" setup </dev/tty
-  else
-    warn "no terminal available; run '$rea_bin setup' yourself."
-  fi
+  register_agents "$rea_bin"
   if [ "$had_hopper" = false ] && [ -x "$HOPPER_LAUNCHER" ]; then
     local owner
     owner="$(pkg_owner "$HOPPER_LAUNCHER")"
@@ -591,7 +607,7 @@ do_uninstall() {
         ;;
       hopper:*)
         line="${line#hopper:}"
-        if pkg_installed "$line" && confirm "Remove Hopper package $line (installed by rea setup)?"; then
+        if pkg_installed "$line" && confirm "Remove Hopper package $line (installed by rea setup)?" "Hopper package $line"; then
           pkg_remove "$line"
         fi
         ;;

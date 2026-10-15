@@ -50,10 +50,15 @@ record() {
 # Opening the terminal is the only reliable test; a readable-file test passes in a container that has no terminal.
 have_tty() { (: <"$TTY_PATH") 2>/dev/null; }
 
+# Usage: confirm QUESTION ITEM. Without a terminal the [y/N] default holds and the warning names ITEM (D-02).
 confirm() {
   [ "$assume_yes" = true ] && return 0
+  if ! have_tty; then
+    warn "no terminal available; leaving $2 in place."
+    return 1
+  fi
   local reply
-  read -r -p "$1 [y/N] " reply </dev/tty
+  read -r -p "$1 [y/N] " reply <"$TTY_PATH"
   [[ "$reply" =~ ^[Yy] ]]
 }
 
@@ -388,7 +393,7 @@ do_uninstall() {
     case "$line" in
       app:*)
         line="${line#app:}"
-        if [ -e "$line" ] && confirm "Remove $line (installed by rea setup)?"; then
+        if [ -e "$line" ] && confirm "Remove $line (installed by rea setup)?" "$line"; then
           run rm -rf "$line"
         fi
         ;;
@@ -418,10 +423,10 @@ do_uninstall() {
   done < <(tail -r <<<"$state")
 
   # 4. Homebrew and Command Line Tools, only if we installed them.
-  if grep -qxF homebrew <<<"$state" && confirm "Remove Homebrew (installed by this script)?"; then
+  if grep -qxF homebrew <<<"$state" && confirm "Remove Homebrew (installed by this script)?" "Homebrew"; then
     run /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
   fi
-  if grep -qxF clt <<<"$state" && confirm "Remove Xcode Command Line Tools (installed by this script)?"; then
+  if grep -qxF clt <<<"$state" && confirm "Remove Xcode Command Line Tools (installed by this script)?" "the Xcode Command Line Tools"; then
     run sudo rm -rf /Library/Developer/CommandLineTools
   fi
 
