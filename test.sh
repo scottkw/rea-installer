@@ -488,7 +488,7 @@ for mode in 'export JAVA_HOME="$ours"' 'unset JAVA_HOME'; do
   mkdir -p "$work/home/.rea-installer"
   printf 'brew:openjdk@21\n' >"$work/home/.rea-installer/installed"
   sandbox "$MACOS" "$mode; profile_exports+=(\"export REA_TEST=1\"); write_profile"
-  if [ "$rc" -ne 0 ] || ! grep -qF 'does not run' "$work/out" || ! grep -qF 'Rerun without --no-ghidra' "$work/out" ||
+  if [ "$rc" -ne 0 ] || ! grep -qF 'does not run' "$work/out" || ! grep -qF 'Reinstall openjdk@21 with Homebrew' "$work/out" ||
     ! grep -qx 'export REA_TEST=1' "$work/home/.bash_profile" 2>/dev/null || grep -q '^export JAVA_HOME=' "$work/home/.bash_profile"; then
     all_ok=false; printf '    mode: %s\n' "$mode"; show
   fi

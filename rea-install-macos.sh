@@ -222,6 +222,7 @@ install_ghidra() {
 write_profile() {
   # Ours is written only when install_jdk chose it this run, or the script owns it and it runs; a usable user JAVA_HOME never is (JAVA-03).
   # A set JAVA_HOME is replaced only with the D-04 warning, and an owned JDK that no longer runs is left out with a warning, the same from any shell (JAVA-04, WR-01, WR-03).
+  # The old block is removed on every run, so the block always matches this run: rewritten when something is queued, gone when nothing is.
   local owned=false
   jdk_owned && owned=true
   if [ "$jdk_chosen" = true ] || [ "$owned" = true ]; then
@@ -230,7 +231,9 @@ write_profile() {
     # When jdk_chosen, install_jdk already checked ours, warned and set JAVA_HOME to it, so the equal-path branch takes it silently.
     if [ "$jdk_chosen" = false ] && ! jdk_usable "$ours"; then
       jdk_usable "${JAVA_HOME:-}" ||
-        warn "the script's $JDK_FORMULA at $ours does not run; JAVA_HOME is left out of $(profile_file). Rerun without --no-ghidra to reinstall it."
+        warn "the script's $JDK_FORMULA at $ours does not run; JAVA_HOME is left out of $(profile_file). Reinstall $JDK_FORMULA with Homebrew to repair it."
+      # rea setup in step 9 copies the session JAVA_HOME into agent registrations.
+      if [ "${JAVA_HOME:-}" = "$ours" ]; then unset JAVA_HOME; fi
       ours=""
     elif [ "${JAVA_HOME:-}" = "$ours" ]; then
       :
@@ -246,11 +249,11 @@ write_profile() {
       profile_exports+=("export JAVA_HOME=\"$ours\"")
     fi
   fi
+  local profile
+  profile="$(profile_file)"
+  remove_profile_block "$profile"
   if ((${#profile_exports[@]} > 0)); then
-    local profile
-    profile="$(profile_file)"
     log "Adding REA settings to $profile"
-    remove_profile_block "$profile"
     if [ "$dry_run" = true ]; then
       printf '    %s\n' "$PROFILE_BEGIN" "${profile_exports[@]}" "$PROFILE_END"
     else
