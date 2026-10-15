@@ -117,6 +117,8 @@ Several tools are found only through environment variables, so the scripts set t
   # <<< rea-installer <<<
   ```
 
+  On macOS, when the script installed Homebrew, the block also holds Homebrew's `eval "$(brew shellenv)"` line, so `brew`, `node` and `rea` are on `PATH` in new terminals. Uninstall removes it with the block.
+
 - **Windows:** user environment variables, so agents started from the Start menu see them too.
 
 ## Options
@@ -140,7 +142,7 @@ Without `--yes`, `rea setup` runs interactively: you choose which agents to regi
 
 Uninstall reads `~/.rea-installer/installed` and reverses it, newest first:
 
-1. Runs `rea uninstall --purge-data`, REA's own command. It removes REA's agent registrations, its skill files and `~/.rea`. If it fails, or the `rea` CLI is broken, uninstall warns and carries on with the rest.
+1. Runs `rea uninstall --purge-data`, REA's own command. It removes REA's agent registrations, its skill files and `~/.rea`. If it fails, or the `rea` CLI is broken, uninstall warns and carries on with the rest. On macOS, if the recorded `npm` can no longer run (for example, its Node.js was removed), uninstall stops before removing anything; repair or reinstall that Node.js and npm, then rerun.
 2. Removes the `rea-agents` npm package.
 3. Removes the shell-profile block (macOS and Linux) or the user environment variables (Windows).
 4. Removes packages the script installed.
@@ -160,7 +162,7 @@ Anything that was on your machine before you ran `install` is left alone.
   - `rea setup` copies only the Ghidra, IDA, JADX and Hopper settings into agent registrations (`src/doctorRuntime.ts`), so the other settings need the shell profile or Windows environment variables.
   - REA's MCP server only offers its Linux capture, firmware, pwntools and WASM tools when an *absolute path* is set (`src/server/createServer.ts`). Having the tool on `PATH` isn't enough.
 
-**Leave pre-existing things alone.** Before installing anything, each script checks whether it's already there: a supported Node.js (including one managed by nvm), a JDK 21 or newer in `JAVA_HOME` (an older one is left alone and the script installs its own JDK 21), Ghidra on `PATH`, an installed package. Only what it actually adds goes into the ledger, so uninstall can't remove something you installed yourself. On macOS, installing Ghidra also installs and records Homebrew's `openjdk@21`, because Homebrew's `ghidra` depends on it, even when your own JDK 21 is used.
+**Leave pre-existing things alone.** Before installing anything, each script checks whether it's already there: a supported Node.js (including one managed by nvm), a JDK 21 or newer in `JAVA_HOME` (an older one is left alone and the script installs its own JDK 21), Ghidra on `PATH`, an installed package. Only what it actually adds goes into the ledger, so uninstall can't remove something you installed yourself. On macOS, installing Ghidra also installs and records Homebrew's `openjdk@21` if it isn't already installed (an existing one is left alone and not recorded), because Homebrew's `ghidra` depends on it, even when your own JDK 21 is used.
 
 **Verify every download.** Anything not from a package manager is checked against a SHA-256 before use. A mismatch deletes the partial file and stops the install. Linux and Windows unpack each archive into a staging folder and move it into place only after extraction succeeds, so a failed extract leaves no half-finished tool folder and a rerun extracts again.
 
@@ -194,7 +196,7 @@ Anything that was on your machine before you ran `install` is left alone.
 
 | Script | Tested on | What was tested |
 |---|---|---|
-| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. `test.sh` loads the script's functions in a sandboxed home with stub commands and checks the profile-block round trip, `node_supported`, JDK selection and `JAVA_HOME` across reruns, failed `brew install` reporting, uninstall with a broken `rea`, the no-terminal prompts and `rea setup` skip, and the unattended Homebrew plan. The JADX checksum against the real download. |
+| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. `test.sh` loads the script's functions in a sandboxed home with stub commands and checks the profile-block round trip, `node_supported`, JDK selection and `JAVA_HOME` across reruns, failed `brew install` reporting, uninstall with a broken `rea`, the no-terminal prompts and `rea setup` skip, the unattended Homebrew plan, the Homebrew PATH line in the profile block, and clearing the sudo ticket after Homebrew's installer. The JADX checksum against the real download. |
 | Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs as x64 and ARM64 (Ghidra and JADX skipped on ARM64), plus rejection of 32-bit Windows. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. `test.sh` dot-sources the script with a stubbed `winget` and checks failed extraction and rerun, uninstall with a broken `rea`, and `Install-Jdk`'s `JAVA_HOME` handling (reuse, dry run, stale or missing values). |
 | Linux | Docker containers: Ubuntu 24.04 (x64), Fedora 44 (arm64), Arch Linux (x64) | See below. |
 
