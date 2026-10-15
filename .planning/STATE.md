@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 3
+current_phase: 03
 current_phase_name: macOS Unattended Install and README Sync
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-10-15T03:38:15.647Z"
-last_activity: 2026-10-14
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 39947e340fa18a96fc64205e28a072a0d1585460
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-10-15T13:44:33.200Z"
+last_activity: 2026-10-15
+last_activity_desc: Phase 03 execution started
+state_head: c059733e11fff2f9ee679975f2529d31aba3ffc3
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 67
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** Installing and uninstalling must never leave the user's machine in a silently broken or altered state: a failure stops loudly, a rerun recovers, and uninstall removes only what the script added.
-**Current focus:** Phase 02 — Consistent Java Handling
+**Current focus:** Phase 03 — macOS Unattended Install and README Sync
 
 ## Current Position
 
-Phase: 3 (macOS Unattended Install and README Sync) — READY TO EXECUTE
-Plan: Not started
+Phase: 03 (macOS Unattended Install and README Sync) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-10-14 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-10-15 — Phase 03 execution started
 
 Progress: [███████░░░] 67%
 
@@ -72,6 +72,7 @@ Progress: [███████░░░] 67%
 | Phase 02 P08 | 4min | 2 tasks | 2 files |
 | Phase 02 P09 | 3 min | 3 tasks | 4 files |
 | Phase 02 P10 | 3 min | 2 tasks | 6 files |
+| Phase 03 P01 | 8 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Review IN-02 (no-npm dry-run) deferred as accepted, backlog 999.1; Phase 2 review dispositions at open 0
 - [Phase 02]: No GitHub Actions; all testing is local: /bin/bash ./test.sh on macOS (Bash 3.2) and ./test.sh in a local Linux container (G-02-6)
 - [Phase 02]: Completed Phase 1 history keeps its text; the Phase 1 criterion that named GitHub Actions gets a dated note instead of a rewrite
+- [Phase 03]: TTY_PATH is an internal constant assigned unconditionally, never read from the environment, so an inherited value cannot pre-answer an uninstall prompt
+- [Phase 03]: register_agents and confirm QUESTION ITEM are byte-identical in both bash scripts; no terminal skips rea setup with a warning and answers prompts no
+- [Phase 03]: install_homebrew records homebrew only after the installer returned 0; --yes adds sudo -v (with a terminal) and env NONINTERACTIVE=1
 
 ### Pending Todos
 
@@ -145,6 +149,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T03:02:15.839Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-macos-unattended-install-and-readme-sync/03-CONTEXT.md
+Last session: 2026-10-15T13:44:33.153Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None

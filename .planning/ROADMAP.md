@@ -96,10 +96,10 @@ Plans:
   2. macOS `install --yes` on a Mac without Homebrew runs the Homebrew installer non-interactively and never waits for Return
   3. README Status, Testing and Known limitations sections list each fix from this milestone, describe running `./test.sh` locally (`/bin/bash ./test.sh` on macOS, `./test.sh` in a Linux container), and still state that macOS and Windows are verified by dry run and lint only (real-machine runs pending)
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Tracer: macOS install without a terminal skips `rea setup` with a warning; no-terminal uninstall prompts answer no in both bash scripts (`TTY_PATH`, `have_tty`, `confirm QUESTION ITEM`, `register_agents`); `install_homebrew` under `--yes` uses `sudo -v` + `NONINTERACTIVE=1` and records nothing on failure
+- [x] 03-01-PLAN.md — Tracer: macOS install without a terminal skips `rea setup` with a warning; no-terminal uninstall prompts answer no in both bash scripts (`TTY_PATH`, `have_tty`, `confirm QUESTION ITEM`, `register_agents`); `install_homebrew` under `--yes` uses `sudo -v` + `NONINTERACTIVE=1` and records nothing on failure
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-02-PLAN.md — README: Running the tests subsection, Status/Options/Uninstalling/How engineered behavior, Known limitations (D-10), and the three-run phase gate
@@ -113,7 +113,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | Complete    | 2026-10-14 |
 | 2. Consistent Java Handling | 10/10 | Complete    | 2026-10-14 |
-| 3. macOS Unattended Install and README Sync | 0/2 | Planned | - |
+| 3. macOS Unattended Install and README Sync | 1/2 | In Progress | - |
 
 ## Backlog
 

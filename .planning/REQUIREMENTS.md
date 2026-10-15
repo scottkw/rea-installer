@@ -40,8 +40,8 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 
 ### macOS Polish
 
-- [ ] **MAC-01**: macOS `install` without a terminal (non-tty ssh, a script or an agent) warns to run `rea setup` manually instead of failing (HARD-09)
-- [ ] **MAC-02**: macOS `install --yes` on a Mac without Homebrew installs Homebrew without waiting for Return (HARD-10)
+- [x] **MAC-01**: macOS `install` without a terminal (non-tty ssh, a script or an agent) warns to run `rea setup` manually instead of failing (HARD-09)
+- [x] **MAC-02**: macOS `install --yes` on a Mac without Homebrew installs Homebrew without waiting for Return (HARD-10)
 
 ### Documentation
 
@@ -89,8 +89,8 @@ Source for every requirement: `.planning/AUDIT.md` (HARD-xx in parentheses has l
 | TEST-04 | Phase 1 | Complete |
 | TEST-05 | Phase 1 | Complete |
 | TEST-06 | Phase 1 | Complete |
-| MAC-01 | Phase 3 | Pending |
-| MAC-02 | Phase 3 | Pending |
+| MAC-01 | Phase 3 | Complete |
+| MAC-02 | Phase 3 | Complete |
 | DOCS-01 | Phase 3 | Pending |
 
 **Coverage:**
