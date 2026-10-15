@@ -390,11 +390,14 @@ Prototype results [VERIFIED: executed, Bash 3.2.57]:
 | A1 | sudo keys the `tty` timestamp to the controlling terminal, not stdin, so `sudo -v` then Homebrew's `sudo -n` works under `curl \| bash --yes` | Finding 4 | Homebrew would fail under `curl \| bash -s install --yes` with a terminal; D-06 hint still shows; confirm in VERI-01 |
 | A2 | No real-Mac run: Homebrew HEAD may change its non-interactive or sudo logic before users run this | Finding 3 | `NONINTERACTIVE` is documented upstream, so low; the D-06 die still catches failures |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Linux "Tested end to end" status row.** It describes container runs from before 7 Linux-changing milestone commits. Recommendation: add a short qualifier (see README Edit Map). D-09 doesn't cover the Linux row, so the planner should state the choice in the plan.
+   RESOLVED: add the qualifier. 03-02-PLAN "Planner decisions recorded here" (open question 1); Task 2 step 1 writes `**Tested end to end before the current round of fixes:**`.
 2. **Extra accepted limitations not in D-10.** The Phase 2 dispositions also accepted: a JRE 21 `JAVA_HOME` is reused (WR-06); the Windows ledger stores only the `JAVA_HOME` name, so a value the user later repointed is removed by uninstall (WR-05); macOS installs and records `openjdk@21` with Ghidra even when a user JDK 21+ is reused. D-10 is a minimum. Recommendation: add the `openjdk@21` note under "How the scripts were engineered" (it's behavior, not a bug) and leave the others out unless the planner wants completeness.
+   RESOLVED: include all of them. 03-02-PLAN "Planner decisions recorded here" (open question 2); Task 2 step 4a adds the `openjdk@21` note, Task 3 step 2 adds the `**JDK check:**` bullet (WR-06) and the WR-05/WR-104 sentences in the Windows `JAVA_HOME` bullet.
 3. **macOS `GHIDRA_INSTALL_DIR`** (02-02-SUMMARY says REA does not find Homebrew's Ghidra without it). Deferred by CONTEXT and out of scope. Do not document it as fact until VERI-01.
+   RESOLVED: deferred to VERI-01, not documented. 03-02-PLAN "Planner decisions recorded here" ("Deferred and not documented as fact"); Task 2 forbids mentioning it and its verify requires `grep -c 'GHIDRA_INSTALL_DIR' README.md` = 0.
 
 ## Environment Availability
 
