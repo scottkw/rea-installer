@@ -27,7 +27,7 @@ These scripts collect all of that into one command per platform, and record ever
 | Script | Status |
 |---|---|
 | Linux | **Tested end to end before the current round of fixes:** full install, reinstall and uninstall in Ubuntu 24.04, Fedora 44 and Arch Linux containers. Uninstall removed everything it added, except what the system still needed. The fixes since then are checked by `test.sh` and container dry runs only; a new full container run of the current script is planned (see [Testing](#testing)). |
-| macOS | **Tested end to end in a macOS 27 virtual machine** with Homebrew already installed: install, `rea doctor` (Ghidra healthy), a rerun with every option, and uninstall, which left Homebrew and npm exactly as before. Not yet tested on a Mac without Homebrew, or with `rea setup` registering real agents. |
+| macOS | **Tested end to end in a macOS 27 virtual machine** with Homebrew already installed: install, `rea doctor` (Ghidra healthy), a rerun with every option, and uninstall, which left Homebrew and npm exactly as before. Also run on a real MacBook with Homebrew: the first install worked, but a rerun stopped at a symlinked `~/.zshrc`. That is now fixed and covered by `test.sh`, but the rerun hasn't been repeated on that Mac. Not yet tested on a Mac without Homebrew, or with the installer's `rea setup` step registering real agents. |
 | Windows (x64 and ARM64) | **Dry runs and `test.sh` only:** parsed, dry-run and function-tested with a stubbed `winget`, but never run on real Windows |
 
 For macOS and Windows, run with `--dry-run` / `-DryRun` first and read the plan. If anything goes wrong, please [open an issue](https://github.com/scottkw/rea-installer/issues) with the output.
@@ -120,6 +120,8 @@ Several tools are found only through environment variables, so the scripts set t
 
   On macOS, when the script installed Homebrew, the block also holds Homebrew's `eval "$(brew shellenv)"` line, so `brew`, `node` and `rea` are on `PATH` in new terminals. Uninstall removes it with the block.
 
+  If your profile is a symlink (for example into a dotfiles repository), the scripts edit the file it points to and leave the link in place.
+
   On macOS, the block also sets `GHIDRA_INSTALL_DIR` to Homebrew's Ghidra (`$(brew --prefix ghidra)/libexec`), because REA finds Ghidra only through that variable. `rea setup` copies it into each agent's registration. A `GHIDRA_INSTALL_DIR` you already set to another folder is left alone.
 
 - **Windows:** user environment variables, so agents started from the Start menu see them too.
@@ -136,6 +138,8 @@ Several tools are found only through environment variables, so the scripts set t
 | `--dry-run` | `-DryRun` | Print the plan without changing anything |
 
 Without `--yes`, `rea setup` runs interactively: you choose which agents to register, review its plan, and approve it. Without `--yes` and without a terminal (a script, a non-interactive ssh session or an agent), the macOS and Linux scripts skip `rea setup` with a warning telling you to run it yourself, and answer uninstall prompts no.
+
+In the agent list, press Space to select each agent and then Enter; Enter alone selects none. When `rea setup` finishes without any agent registered, the scripts warn and tell you to run `rea setup` again. You can also register a single agent directly, for example `rea setup --client claude_code`.
 
 ## Uninstalling
 
@@ -178,7 +182,7 @@ Anything that was on your machine before you ran `install` is left alone.
 
 **Reruns are safe.**
 - Rerunning `install` doesn't download what's already present.
-- It doesn't add a second profile block; the block is replaced.
+- It doesn't add a second profile block; the block is replaced. A symlinked profile stays a symlink, and its target keeps its permissions.
 - It recognises its own previous settings instead of mistaking them for yours.
 - macOS keeps exporting its own `JAVA_HOME` in the single profile block across reruns, and never copies a JDK 21+ `JAVA_HOME` of yours into it.
 - Linux replaces its own `~/.rea-installer/jdk` if that JDK no longer runs.
@@ -192,6 +196,7 @@ Anything that was on your machine before you ran `install` is left alone.
 - Under `--yes`, a Homebrew install that fails stops with a hint about sudo and records nothing.
 - A dry run only prints the plan. A check in a fresh Linux container confirms the home folder is unchanged afterwards.
 - Without a terminal, `rea setup` is skipped with a warning and uninstall prompts are answered no, instead of the script failing.
+- If `rea setup` finishes without registering any agent, the script warns instead of reporting success silently. It checks this with `rea doctor`.
 
 **Small and readable.** Each script is a single file with no dependencies beyond what the platform ships, plus `--dry-run` so you can read the plan before running it.
 
@@ -199,7 +204,7 @@ Anything that was on your machine before you ran `install` is left alone.
 
 | Script | Tested on | What was tested |
 |---|---|---|
-| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. `test.sh` loads the script's functions in a sandboxed home with stub commands and checks the profile-block round trip, `node_supported`, JDK selection and `JAVA_HOME` across reruns, failed `brew install` reporting, uninstall with a broken `rea`, the no-terminal prompts and `rea setup` skip, the unattended Homebrew plan, the Homebrew PATH line in the profile block, and clearing the sudo ticket after Homebrew's installer. The JADX checksum against the real download. `GHIDRA_INSTALL_DIR` on install, rerun and `--no-ghidra`, and `brew install` running with `HOMEBREW_NO_ASK=1`. |
+| macOS | macOS 27 (Apple silicon) | `bash -n` and `shellcheck` under the system `/bin/bash` 3.2. Dry runs of install and uninstall. `test.sh` loads the script's functions in a sandboxed home with stub commands and checks the profile-block round trip (including through a symlinked profile, for both bash scripts), `node_supported`, JDK selection and `JAVA_HOME` across reruns, failed `brew install` reporting, uninstall with a broken `rea`, the no-terminal prompts and `rea setup` skip, the warning when `rea setup` registers no agent, the unattended Homebrew plan, the Homebrew PATH line in the profile block, and clearing the sudo ticket after Homebrew's installer. The JADX checksum against the real download. `GHIDRA_INSTALL_DIR` on install, rerun and `--no-ghidra`, and `brew install` running with `HOMEBREW_NO_ASK=1`. |
 | macOS | macOS 27 virtual machine ([Tart](https://github.com/cirruslabs/tart) image `macos-golden-gate-base`: Homebrew and the Command Line Tools preinstalled, no agents) | See below. |
 | Windows | PowerShell 7 on macOS, with a stubbed `winget` | Parsed with the PowerShell parser. Full dry runs as x64 and ARM64 (Ghidra and JADX skipped on ARM64), plus rejection of 32-bit Windows. The real download, checksum and extract path (WABT). Rejection of a tampered checksum. Uninstall ordering and environment-variable cleanup. `test.sh` dot-sources the script with a stubbed `winget` and checks failed extraction and rerun, uninstall with a broken `rea`, and `Install-Jdk`'s `JAVA_HOME` handling (reuse, dry run, stale or missing values). |
 | Linux | Docker containers: Ubuntu 24.04 (x64), Fedora 44 (arm64), Arch Linux (x64) | See below. |
