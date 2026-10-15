@@ -229,6 +229,26 @@ install_ghidra() {
   fi
 }
 
+install_homebrew() {
+  local script hint="Homebrew install failed; it needs sudo. Run 'sudo -v' and rerun, or install Homebrew first."
+  log "Installing Homebrew"
+  # A plain assignment, so a failed download stops here instead of running an empty script and recording homebrew.
+  script="$(curl -fsSL --proto '=https' https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" ||
+    die "could not download the Homebrew installer."
+  if [ "$assume_yes" = true ]; then
+    # Homebrew checks sudo with -n when non-interactive, so cache a ticket while a terminal can still ask for it.
+    if have_tty; then
+      run sudo -v || die "$hint"
+    fi
+    # run execs its arguments, so the variable goes through env rather than a leading assignment.
+    run env NONINTERACTIVE=1 /bin/bash -c "$script" || die "$hint"
+  else
+    run /bin/bash -c "$script" || die "$hint"
+  fi
+  record "homebrew"
+  [ "$dry_run" = true ] || load_brew || die "Homebrew installed but brew was not found."
+}
+
 write_profile() {
   # Ours is written only when install_jdk chose it this run, or the script owns it and it runs; a usable user JAVA_HOME never is (JAVA-03).
   # A set JAVA_HOME is replaced only with the D-04 warning, and an owned JDK that no longer runs is left out with a warning, the same from any shell (JAVA-04, WR-01, WR-03).
@@ -298,12 +318,7 @@ do_install() {
   fi
 
   # 2. Homebrew
-  if ! load_brew; then
-    log "Installing Homebrew"
-    run /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    record "homebrew"
-    [ "$dry_run" = true ] || load_brew || die "Homebrew installed but brew was not found."
-  fi
+  if ! load_brew; then install_homebrew; fi
 
   # 3. Node.js + npm
   load_nvm
