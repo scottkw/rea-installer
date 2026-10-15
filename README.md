@@ -26,9 +26,9 @@ These scripts collect all of that into one command per platform, and record ever
 
 | Script | Status |
 |---|---|
-| Linux | **Tested end to end:** full install, reinstall and uninstall in Ubuntu 24.04, Fedora 44 and Arch Linux containers. Uninstall removed everything it added, except what the system still needed (see [Testing](#testing)). |
-| macOS | **Dry runs only:** lint and dry runs pass, but no real install has been run yet |
-| Windows (x64 and ARM64) | **Dry runs only:** parsed and dry-run with a stubbed `winget`, but never run on real Windows |
+| Linux | **Tested end to end before the current round of fixes:** full install, reinstall and uninstall in Ubuntu 24.04, Fedora 44 and Arch Linux containers. Uninstall removed everything it added, except what the system still needed. The fixes since then are checked by `test.sh` and container dry runs (see [Testing](#testing)). |
+| macOS | **Dry runs and `test.sh` only:** no real install has been run yet |
+| Windows (x64 and ARM64) | **Dry runs and `test.sh` only:** parsed, dry-run and function-tested with a stubbed `winget`, but never run on real Windows |
 
 For macOS and Windows, run with `--dry-run` / `-DryRun` first and read the plan. If anything goes wrong, please [open an issue](https://github.com/scottkw/rea-installer/issues) with the output.
 
@@ -127,10 +127,10 @@ Several tools are found only through environment variables, so the scripts set t
 | `--with-android` | `-WithAndroid` | JADX jar, Apktool, adb |
 | `--with-extras` | `-WithExtras` | Rizin, GNU objdump, WABT |
 | `--with-linux-tools` | — | Linux only: TShark/capinfos, sigrok-cli, GDB, pwntools, mitmproxy, Wakaru |
-| `--yes` | `-Yes` | Non-interactive. Runs `rea setup --yes --all-detected`, which registers REA with **every** agent it detects, and accepts uninstall prompts. |
+| `--yes` | `-Yes` | Non-interactive. Runs `rea setup --yes --all-detected`, which registers REA with **every** agent it detects, and accepts uninstall prompts. On macOS it also installs Homebrew without waiting for Return, asking for your sudo password once first when a terminal is available. |
 | `--dry-run` | `-DryRun` | Print the plan without changing anything |
 
-Without `--yes`, `rea setup` runs interactively: you choose which agents to register, review its plan, and approve it.
+Without `--yes`, `rea setup` runs interactively: you choose which agents to register, review its plan, and approve it. Without `--yes` and without a terminal (a script, a non-interactive ssh session or an agent), the macOS and Linux scripts skip `rea setup` with a warning telling you to run it yourself, and answer uninstall prompts no.
 
 ## Uninstalling
 
@@ -140,13 +140,13 @@ Without `--yes`, `rea setup` runs interactively: you choose which agents to regi
 
 Uninstall reads `~/.rea-installer/installed` and reverses it, newest first:
 
-1. Runs `rea uninstall --purge-data`, REA's own command. It removes REA's agent registrations, its skill files and `~/.rea`.
+1. Runs `rea uninstall --purge-data`, REA's own command. It removes REA's agent registrations, its skill files and `~/.rea`. If it fails, or the `rea` CLI is broken, uninstall warns and carries on with the rest.
 2. Removes the `rea-agents` npm package.
 3. Removes the shell-profile block (macOS and Linux) or the user environment variables (Windows).
 4. Removes packages the script installed.
    - **macOS:** it skips a formula that something else now depends on (checked with `brew uses`).
    - **Linux:** at install time it records each package together with every dependency that package pulled in. At uninstall it first simulates removing that exact set. If the simulation would also remove anything else (meaning you've since installed something that relies on it), it keeps the whole set and warns. Otherwise it purges the set.
-5. Asks before removing Hopper, Homebrew or the Xcode Command Line Tools, and only if this script's run installed them.
+5. Asks before removing Hopper, Homebrew or the Xcode Command Line Tools, and only if this script's run installed them. Without a terminal it keeps them and prints a warning naming each one, unless you passed `--yes`.
 6. Deletes `~/.rea-installer`, which holds every downloaded tool, JDK, Node.js and Python venv.
 
 Anything that was on your machine before you ran `install` is left alone.
@@ -160,9 +160,9 @@ Anything that was on your machine before you ran `install` is left alone.
   - `rea setup` copies only the Ghidra, IDA, JADX and Hopper settings into agent registrations (`src/doctorRuntime.ts`), so the other settings need the shell profile or Windows environment variables.
   - REA's MCP server only offers its Linux capture, firmware, pwntools and WASM tools when an *absolute path* is set (`src/server/createServer.ts`). Having the tool on `PATH` isn't enough.
 
-**Leave pre-existing things alone.** Before installing anything, each script checks whether it's already there: a supported Node.js (including one managed by nvm), a JDK in `JAVA_HOME`, Ghidra on `PATH`, an installed package. Only what it actually adds goes into the ledger, so uninstall can't remove something you installed yourself.
+**Leave pre-existing things alone.** Before installing anything, each script checks whether it's already there: a supported Node.js (including one managed by nvm), a JDK 21 or newer in `JAVA_HOME` (an older one is left alone and the script installs its own JDK 21), Ghidra on `PATH`, an installed package. Only what it actually adds goes into the ledger, so uninstall can't remove something you installed yourself. On macOS, installing Ghidra also installs and records Homebrew's `openjdk@21`, because Homebrew's `ghidra` depends on it, even when your own JDK 21 is used.
 
-**Verify every download.** Anything not from a package manager is checked against a SHA-256 before use. A mismatch deletes the partial file and stops the install.
+**Verify every download.** Anything not from a package manager is checked against a SHA-256 before use. A mismatch deletes the partial file and stops the install. Linux and Windows unpack each archive into a staging folder and move it into place only after extraction succeeds, so a failed extract leaves no half-finished tool folder and a rerun extracts again.
 
 | Download | Checksum source |
 |---|---|
@@ -175,10 +175,18 @@ Anything that was on your machine before you ran `install` is left alone.
 - Rerunning `install` doesn't download what's already present.
 - It doesn't add a second profile block; the block is replaced.
 - It recognises its own previous settings instead of mistaking them for yours.
+- macOS keeps exporting its own `JAVA_HOME` in the single profile block across reruns, and never copies a JDK 21+ `JAVA_HOME` of yours into it.
+- Linux replaces its own `~/.rea-installer/jdk` if that JDK no longer runs.
+- Windows sets a user `JAVA_HOME` to the Temurin 21 it installed, found through the `java` on `PATH`, and replaces one it set earlier only when that folder no longer has `java.exe`.
 
 **Keep the system Python out of it.** pwntools and mitmproxy go into private virtual environments with a Python 3.12 that [uv](https://github.com/astral-sh/uv) downloads into `~/.rea-installer`. REA pins Unicorn 2.1.2, which has no wheels past Python 3.13, and mitmproxy 12 needs 3.12+. With a private interpreter, the result doesn't depend on which Python your distribution ships. uv itself is pinned by checksum, to a release that had been out for over two weeks.
 
-**Fail loudly.** All three scripts run in strict mode: `set -euo pipefail` in bash, `Set-StrictMode` and `$ErrorActionPreference = 'Stop'` in PowerShell. When an optional tool isn't available, the script warns and skips it. When a required step fails, it stops with a message saying what to do.
+**Fail loudly.** All three scripts run in strict mode: `set -euo pipefail` in bash, `Set-StrictMode` and `$ErrorActionPreference = 'Stop'` in PowerShell. When an optional tool isn't available, the script warns and skips it. When a required step fails, it stops with a message saying what to do:
+
+- A failed required package install (Linux) or `brew install` (macOS) stops the install and is not recorded.
+- Under `--yes`, a Homebrew install that fails stops with a hint about sudo and records nothing.
+- A dry run only prints the plan. A check in a fresh Linux container confirms the home folder is unchanged afterwards.
+- Without a terminal, `rea setup` is skipped with a warning and uninstall prompts are answered no, instead of the script failing.
 
 **Small and readable.** Each script is a single file with no dependencies beyond what the platform ships, plus `--dry-run` so you can read the plan before running it.
 
