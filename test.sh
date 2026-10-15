@@ -494,6 +494,25 @@ for mode in 'export JAVA_HOME="$ours"' 'unset JAVA_HOME'; do
   fi
 done
 if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; fi
+# Gap 2, WR-01: nothing else queued is the default plain rerun, and the dead JAVA_HOME must still leave the block and the session.
+n="JAVA-04 macOS --no-ghidra rerun removes a dead owned JAVA_HOME when nothing else is queued"
+if [ "$(uname -s)" = Darwin ]; then
+  all_ok=true
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  for mode in 'export JAVA_HOME="$ours"' 'unset JAVA_HOME'; do
+    fresh_home
+    printf '%s\n' '# user line' '# >>> rea-installer >>>' "export JAVA_HOME=\"$ours\"" '# <<< rea-installer <<<' >"$work/home/.bash_profile"
+    sandbox "$MACOS" "$mode; write_profile; printf 'JAVA_HOME=%s\n' \"\${JAVA_HOME:-}\""
+    if [ "$rc" -ne 0 ] || ! grep -qF 'does not run' "$work/out" || ! grep -qx 'JAVA_HOME=' "$work/out" ||
+      grep -q '^export JAVA_HOME=' "$work/home/.bash_profile" || grep -qx '# >>> rea-installer >>>' "$work/home/.bash_profile" ||
+      ! grep -qx '# user line' "$work/home/.bash_profile"; then
+      all_ok=false; printf '    mode: %s\n' "$mode"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+    fi
+  done
+  if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; fi
+else
+  skip "$n (macOS only)"
+fi
 fresh_home
 mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
 # shellcheck disable=SC2016  # expanded inside the sandbox
