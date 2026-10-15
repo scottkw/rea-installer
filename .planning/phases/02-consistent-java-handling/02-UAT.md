@@ -1,5 +1,5 @@
 ---
-status: partial
+status: diagnosed
 phase: 02-consistent-java-handling
 source: [02-VERIFICATION.md]
 started: 2026-10-15T01:09:27Z
@@ -69,8 +69,13 @@ blocked: 1
   reason: "User reported: Go with your recommendation (decided rule: filter 'Picked up' lines)"
   severity: minor
   test: 1
-  artifacts: []
-  missing: []
+  root_cause: "Linux install_jdk die message prints the first 3 lines of java -version unfiltered (02-06 IN-04 fix), contradicting 02-01 T-02-02 which forbids printing that output"
+  artifacts:
+    - path: "rea-install-linux.sh"
+      issue: "die at line ~380 pipes java -version 2>&1 straight to head -3"
+  missing:
+    - "Insert grep -v '^Picked up' before head -3 (keep the die firing if grep matches nothing); add a test.sh case with a picked-up stub JDK that fails jdk_usable and assert the die text has no Picked up line"
+  debug_session: "02-REVIEW.md (diagnosed and reproduced by code review)"
 
 - gap_id: G-02-2
   truth: "A macOS --no-ghidra rerun that replaces a set, non-21 JAVA_HOME with the script's own JDK prints the D-04 warning (review WR-01)"
@@ -78,8 +83,13 @@ blocked: 1
   reason: "User reported: fix (apply the split-clause fix from 02-REVIEW.md WR-01 plus a test.sh case)"
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "write_profile joins the equal-path clause and the owned-but-unusable clause in one condition, so replacing a set non-21 JAVA_HOME prints no D-04 warning (02-REVIEW WR-01)"
+  artifacts:
+    - path: "rea-install-macos.sh"
+      issue: "write_profile JAVA_HOME condition (~lines 224-232)"
+  missing:
+    - "Split the condition per 02-REVIEW WR-01 Fix and warn when a set value is replaced; test.sh case: ledger brew:openjdk@21, JAVA_HOME=jdks/17, write_profile only, expect block exports ours and output contains \"not JDK 21 or newer\""
+  debug_session: "02-REVIEW.md (diagnosed and reproduced by code review)"
 
 - gap_id: G-02-3
   truth: "A macOS --no-ghidra rerun whose owned openjdk@21 no longer runs gives the same result from any shell: JAVA_HOME is left out of the block and a warning says to rerun without --no-ghidra (review WR-03)"
@@ -87,8 +97,13 @@ blocked: 1
   reason: "User reported: fix (apply the WR-03 guard from 02-REVIEW.md together with WR-01, plus test.sh cases)"
   severity: major
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "write_profile accepts JAVA_HOME == ours without checking it runs when install_jdk did not run (--no-ghidra), so result depends on caller shell (02-REVIEW WR-03)"
+  artifacts:
+    - path: "rea-install-macos.sh"
+      issue: "write_profile JAVA_HOME condition (same edit as G-02-2)"
+  missing:
+    - "Outside jdk_chosen, require jdk_usable \"$ours\" and warn \"the script's $JDK_FORMULA at $ours does not run ... Rerun without --no-ghidra\"; test.sh cases for JAVA_HOME=ours and unset, both expect 0 JAVA_HOME lines and the warning"
+  debug_session: "02-REVIEW.md (diagnosed and reproduced by code review)"
 
 - gap_id: G-02-4
   truth: "On Windows, a saved JAVA_HOME whose folder has no bin\\java.exe is treated as dead and replaced with Temurin's folder (review WR-02)"
@@ -96,8 +111,13 @@ blocked: 1
   reason: "User reported: fix (test for bin\\java.exe, update Set-UserEnv comment and log text, add a pwsh driver case with a leftover lib-only folder)"
   severity: major
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "The Windows replace rule tests whether the saved JAVA_HOME folder exists, not whether bin\\java.exe exists; MSI leaves non-empty folders behind (02-REVIEW WR-02)"
+  artifacts:
+    - path: "rea-install-windows.ps1"
+      issue: "$gone computation (~lines 204-207), Set-UserEnv comment (~122), log text (~130)"
+  missing:
+    - "Use Test-Path on Join-Path $userJava bin java.exe -PathType Leaf; reword comment/log to \"has no java.exe\"; add a pwsh driver case with a leftover lib-only folder expecting the setx line"
+  debug_session: "02-REVIEW.md (diagnosed and reproduced by code review)"
 
 - gap_id: G-02-5
   truth: "jdk_owned on macOS checks only the script's own profile block for export JAVA_HOME= lines, so a user's own JAVA_HOME line does not trigger brew --prefix or count as ownership (review IN-01)"
@@ -105,8 +125,29 @@ blocked: 1
   reason: "User accepted disposition in test 5: fix IN-01 (limit both greps to the PROFILE_BEGIN..PROFILE_END range, add an IN-03 case with a user export JAVA_HOME line)"
   severity: minor
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: "jdk_owned greps the whole profile for export JAVA_HOME= instead of only the script block (02-REVIEW IN-01)"
+  artifacts:
+    - path: "rea-install-macos.sh"
+      issue: "jdk_owned (~lines 156, 160-163)"
+  missing:
+    - "Restrict both greps to sed -n \"/^$PROFILE_BEGIN$/,/^$PROFILE_END$/p\"; add an IN-03 test.sh case whose profile has a user export JAVA_HOME line outside the block"
+  debug_session: "02-REVIEW.md (diagnosed and reproduced by code review)"
+
+- gap_id: G-02-6
+  truth: "The project has no GitHub Actions; all testing is local (test.sh under /bin/bash 3.2 on macOS and ./test.sh in a Linux container)"
+  status: failed
+  reason: "User decided during UAT test 7: we don't need any GitHub Actions; all release testing is local"
+  severity: minor
+  test: 7
+  root_cause: "Phase 1 added .github/workflows/test.yml and docs describe CI as a verification step"
+  artifacts:
+    - path: ".github/workflows/test.yml"
+      issue: "CI workflow the user no longer wants"
+    - path: ".planning/ROADMAP.md, .planning/REQUIREMENTS.md, .claude/CLAUDE.md"
+      issue: "references to GitHub Actions / CI as verification"
+  missing:
+    - "Delete .github/workflows/test.yml and reword CI references to local test.sh runs (macOS Bash 3.2 + Linux container)"
+  debug_session: ""
 
 ## Deferred Follow-Ups
 
