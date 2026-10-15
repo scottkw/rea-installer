@@ -2,10 +2,10 @@
 gsd_state_version: "1.0"
 status: Awaiting next milestone
 stopped_at: Phase 03 complete — all phases complete
-last_updated: "2026-10-15T14:57:31.809Z"
+last_updated: "2026-10-15T17:05:24.438Z"
 last_activity: 2026-10-15
 last_activity_desc: Milestone v1 completed and archived
-state_head: 4cf254a3c825c7b963afb02f9f8b943c30375e80
+state_head: 16c2c71a479fc7bbb1ea78385ac0208734b7f1cb
 progress:
   total_phases: 3
   completed_phases: 3
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 Phase: Milestone v1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-10-15 — Milestone v1 completed and archived
+Last activity: 2026-10-15 — Completed quick task 261015-gjp: macOS GHIDRA_INSTALL_DIR
 
 ## Performance Metrics
 
@@ -86,12 +86,12 @@ None.
 ### Blockers/Concerns
 
 - No real macOS/Windows runs yet; verification is code analysis, dry runs, lint and Linux containers (v2 VERI-01/02).
-- Open question carried from v1: does REA find Ghidra on macOS without `GHIDRA_INSTALL_DIR`?
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 261015-gjp | Fix macOS Ghidra not found by REA: set GHIDRA_INSTALL_DIR for Homebrew ghidra | 2026-10-15 | 16c2c71 | [261015-gjp-fix-macos-ghidra-not-found-by-rea-set-gh](./quick/261015-gjp-fix-macos-ghidra-not-found-by-rea-set-gh/) |
 
 ## Deferred Items
 
