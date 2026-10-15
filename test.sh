@@ -1,5 +1,5 @@
 #!/bin/bash
-# Regression checks for the three installers. Runs locally and in CI: ./test.sh
+# Regression checks for the three installers. Run locally: /bin/bash ./test.sh on macOS, ./test.sh in a Linux container.
 # Prints one PASS/FAIL/SKIP line per check and exits 1 if any check failed.
 # No errexit on purpose: every check runs even after an earlier one fails.
 set -u
@@ -45,8 +45,8 @@ sandbox() {
 
 fresh_home() { rm -rf "${work:?}/home"; mkdir -p "$work/home"; }
 
-# Succeeds when TOOL is usable. Otherwise SKIPs CHECK, or FAILs it in CI so CI never passes by skipping.
-# Docker and shellcheck are absent on the macos-latest runner by design; the ubuntu job covers them.
+# Succeeds when TOOL is usable. Otherwise SKIPs CHECK, or FAILs it when CI=true so an unattended run never passes by skipping.
+# Docker and shellcheck may be missing on a Mac; the Linux container run covers shellcheck.
 need() {
   local tool="$1" check="$2" present=true
   case "$tool" in
@@ -55,7 +55,7 @@ need() {
   esac
   [ "$present" = true ] && return 0
   case "$(uname -s):$tool" in
-    Darwin:docker | Darwin:shellcheck) skip "$check ($tool not on this runner)" ;;
+    Darwin:docker | Darwin:shellcheck) skip "$check ($tool not on this Mac)" ;;
     *) if [ "${CI:-}" = true ]; then bad "$check ($tool not found)"; else skip "$check ($tool not found)"; fi ;;
   esac
   return 1
@@ -238,7 +238,7 @@ fi
 rm -f "$STUBS/apt-get" "$STUBS/apt-cache" "$STUBS/dpkg-query" "$STUBS/brew" "$STUBS/npm" "$STUBS/node"
 
 # ---------------------------------------------------------------- JAVA-02 Linux install_jdk
-# Every sandbox sets JAVA_HOME itself: the GitHub ubuntu runner exports its own.
+# Every sandbox sets JAVA_HOME itself: the host may export its own.
 fresh_home
 mkjdk "$work/jdks/17" "echo 'openjdk version \"17.0.2\" 2022-01-18' >&2"
 mkjdk "$work/jdks/21.0.5" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
