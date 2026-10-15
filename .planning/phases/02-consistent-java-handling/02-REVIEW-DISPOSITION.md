@@ -5,23 +5,23 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A macOS `--no-ghidra` rerun now replaces a JDK 17 `JAVA_HOME` without warning, and the user's own line stops taking effect"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Windows keeps a dead `JAVA_HOME` when the old Temurin folder is not fully removed, so CR-01 can come back"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "When the owned JDK no longer runs, a macOS `--no-ghidra` rerun either writes a dead `JAVA_HOME` or drops it silently, depending on the caller's shell"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`jdk_owned`'s profile probe matches any `export JAVA_HOME=` line, not only the script's block"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: deferred
     title: "Dry runs on a machine without npm die at the REA CLI step (pre-existing, outside this phase)"
   - id: WR-04
     severity: warning
@@ -127,7 +127,7 @@ findings:
     severity: info
     disposition: deferred
     title: "The dry-run fallback warning prints once per `jdk_home` call"
-open: 5
+open: 0
 total: 31
 recorded: 2026-10-15T00:59:53.133Z
 ---
@@ -136,11 +136,11 @@ recorded: 2026-10-15T00:59:53.133Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
+| WR-01 | warning | fixed | fixed in 02-08 (3c1259d) |
+| WR-02 | warning | fixed | fixed in 02-09 (58bad6d) |
+| WR-03 | warning | fixed | fixed in 02-08 (3c1259d) |
+| IN-01 | info | fixed | fixed in 02-08 (e9e01f1) |
+| IN-02 | info | deferred | accepted 2026-10-14: pre-existing no-npm dry-run path outside phase scope; backlog 999.1 |
 | WR-04 | warning | fixed | fixed in 02-06 (d4021ad) (not in the current review) |
 | IN-03 | info | fixed | fixed in 02-06 (2fd5825) (not in the current review) |
 | IN-04 | info | fixed | fixed in 02-06 (d4021ad) (not in the current review) |
