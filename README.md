@@ -113,11 +113,14 @@ Several tools are found only through environment variables, so the scripts set t
   ```bash
   # >>> rea-installer >>>
   export JAVA_HOME="..."
+  export GHIDRA_INSTALL_DIR="..."
   export REA_WABT_BIN_DIRECTORY="..."
   # <<< rea-installer <<<
   ```
 
   On macOS, when the script installed Homebrew, the block also holds Homebrew's `eval "$(brew shellenv)"` line, so `brew`, `node` and `rea` are on `PATH` in new terminals. Uninstall removes it with the block.
+
+  On macOS, the block also sets `GHIDRA_INSTALL_DIR` to Homebrew's Ghidra (`$(brew --prefix ghidra)/libexec`), because REA finds Ghidra only through that variable. `rea setup` copies it into each agent's registration. A `GHIDRA_INSTALL_DIR` you already set to another folder is left alone.
 
 - **Windows:** user environment variables, so agents started from the Start menu see them too.
 
