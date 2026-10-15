@@ -572,6 +572,32 @@ else
   bad "JAVA-02 macOS dry run without brew plans the default Homebrew JDK path"; show
 fi
 
+# ---------------------------------------------------------------- GHID-01 macOS GHIDRA_INSTALL_DIR
+# Stub brew: list reports ghidra installed only when its keg exists, so an absent keg makes brew_install plan the install.
+# Every sandbox sets PATH without the host's: a dev Mac's real ghidraRun would push install_ghidra into its already-available branch.
+# shellcheck disable=SC2016  # expanded by the stub
+stub brew 'case "$1" in
+  --prefix) echo "$HOME/brew/opt/$2" ;;
+  list) case "$*" in *ghidra*) [ -x "$HOME/brew/opt/ghidra/libexec/ghidraRun" ] ;; *) exit 0 ;; esac ;;
+  *) exit 1 ;;
+esac'
+gdir="$work/home/brew/opt/ghidra/libexec"
+# Homebrew's real layout: ghidraRun sits in the opt path's libexec.
+mkghidra() { mkdir -p "$gdir"; printf '#!/bin/sh\nexit 0\n' >"$gdir/ghidraRun"; chmod +x "$gdir/ghidraRun"; }
+n="GHID-01 macOS fresh install exports GHIDRA_INSTALL_DIR and writes it to the profile block"
+fresh_home
+mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+mkghidra
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; unset JAVA_HOME GHIDRA_INSTALL_DIR; install_ghidra; ghidra_setting; write_profile; printf "GHIDRA_INSTALL_DIR=%s\n" "$GHIDRA_INSTALL_DIR"'
+if [ "$rc" -eq 0 ] && grep -qxF "GHIDRA_INSTALL_DIR=$gdir" "$work/out" &&
+  [ "$(grep -cxF "export GHIDRA_INSTALL_DIR=\"$gdir\"" "$work/home/.bash_profile" 2>/dev/null)" = 1 ]; then
+  ok "$n"
+else
+  bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+fi
+rm -f "$STUBS/brew" "$STUBS/ghidraRun"
+
 # ---------------------------------------------------------------- MAC-01/02 unattended install (no terminal, --yes)
 # Every check sets TTY_PATH after sourcing: "$work/no-tty" does not exist (no terminal), "$work/tty-yes" opens and reads y
 # (a stand-in terminal), so results match from a terminal or an agent. Never call do_install, do_uninstall or load_brew here.

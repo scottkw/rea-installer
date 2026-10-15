@@ -32,6 +32,7 @@ with_extras=false
 profile_exports=()
 jdk_chosen=false # set when install_jdk points this run's JAVA_HOME at the script's own JDK
 brew_installed=false # set when install_homebrew ran this run; a dry run records nothing, so the ledger alone cannot tell
+ghidra_brewed=false # set when install_ghidra installs Homebrew's ghidra this run; a dry run records nothing, so the ledger alone cannot tell
 
 log() { printf '==> %s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
@@ -163,6 +164,22 @@ jdk_home() {
   printf '%s/libexec/openjdk.jdk/Contents/Home' "$prefix"
 }
 
+# Homebrew's ghidra keeps ghidraRun and Ghidra/application.properties under the opt path's libexec, which REA expects in GHIDRA_INSTALL_DIR.
+# Callers must use a plain assignment, as with jdk_home, so set -e stops the run on die.
+ghidra_home() {
+  local prefix=""
+  if command -v brew >/dev/null 2>&1; then
+    prefix="$(brew --prefix ghidra)" || prefix=""
+    [ -n "$prefix" ] || die "could not locate Homebrew's ghidra (brew --prefix failed)."
+  elif [ "$dry_run" = true ]; then
+    # jdk_home already warned about the assumed prefix in this run.
+    if [ "$(uname -m)" = arm64 ]; then prefix=/opt/homebrew/opt/ghidra; else prefix=/usr/local/opt/ghidra; fi
+  else
+    die "could not locate Homebrew's ghidra (brew not found)."
+  fi
+  printf '%s/libexec' "$prefix"
+}
+
 # Ownership comes from what the script installed, not the caller's environment (JAVA-04).
 # The ledger is checked first so brew --prefix runs only when the script's own block exports a JAVA_HOME (IN-03, IN-01).
 # Callers use this as an if condition, where set -e is off: `|| exit 1` keeps jdk_home's die fatal.
@@ -227,7 +244,27 @@ install_ghidra() {
       brew_install "$JDK_FORMULA"
     fi
     brew_install ghidra
+    ghidra_brewed=true
+    local dir
+    dir="$(ghidra_home)"
+    [ "$dry_run" = true ] || [ -x "$dir/ghidraRun" ] || die "Homebrew ghidra at $dir has no ghidraRun."
   fi
+}
+
+# REA finds Ghidra only through GHIDRA_INSTALL_DIR, and rea setup in step 9 copies the session value into agent registrations.
+# write_profile rebuilds the block every run, so this runs on every install, reruns included.
+ghidra_setting() {
+  [ "$with_ghidra" = true ] || return 0
+  # No Homebrew means no Homebrew ghidra to point at.
+  [ "$ghidra_brewed" = true ] || command -v brew >/dev/null 2>&1 || return 0
+  local dir
+  dir="$(ghidra_home)"
+  # A dry run that planned the install has no keg yet; otherwise a ghidraRun from a non-Homebrew Ghidra gets nothing.
+  [ "$ghidra_brewed" = true ] || [ -x "$dir/ghidraRun" ] || return 0
+  # The user's own setting is left alone and not written.
+  [ -z "${GHIDRA_INSTALL_DIR:-}" ] || [ "$GHIDRA_INSTALL_DIR" = "$dir" ] || return 0
+  export GHIDRA_INSTALL_DIR="$dir"
+  profile_exports+=("export GHIDRA_INSTALL_DIR=\"$dir\"")
 }
 
 install_homebrew() {
@@ -352,6 +389,7 @@ do_install() {
   if [ "$with_ghidra" = true ]; then
     install_ghidra
   fi
+  ghidra_setting
 
   # 5. Android: JADX needs a full JDK; Apktool and adb are found on PATH.
   if [ "$with_android" = true ]; then
