@@ -357,14 +357,28 @@ install_jdk() {
     # An empty release would make dir $TOOLS_DIR itself, which the bin/java check below would then remove.
     [ -n "$release" ] || die "could not read the Temurin 21 release from Adoptium."
     dir="$(unpack "$link $sha" "$release")"
-    # A layout unpack did not expect (bin/java one level deeper) must not become the trusted JDK.
-    if [ ! -x "$dir/bin/java" ]; then
-      run rm -rf "$dir"
-      die "the Temurin archive has no bin/java under $dir; rerun to download it again."
+    # Adoptium's release_name can differ from the archive's top folder, which puts bin/java one level deeper.
+    # Any other layout must not become the trusted JDK, and a rerun cannot fix it: the download is the same.
+    if [ -x "$dir/bin/java" ]; then
+      run mv "$dir" "$STATE_DIR/jdk"
+    else
+      local inner
+      for inner in "$dir"/*/; do
+        [ -x "${inner}bin/java" ] && break
+        inner=""
+      done
+      if [ -n "$inner" ]; then
+        run mv "${inner%/}" "$STATE_DIR/jdk"
+        run rm -rf "$dir"
+      else
+        run rm -rf "$dir"
+        die "the Temurin archive has no bin/java under $dir; report this, since rerunning repeats the same download."
+      fi
     fi
-    run mv "$dir" "$STATE_DIR/jdk"
   fi
-  [ "$dry_run" = true ] || jdk_usable "$STATE_DIR/jdk" || die "the downloaded JDK at $STATE_DIR/jdk does not run."
+  if [ "$dry_run" = false ] && ! jdk_usable "$STATE_DIR/jdk"; then
+    die "the JDK at $STATE_DIR/jdk does not run; java -version printed: $("$STATE_DIR/jdk/bin/java" -version 2>&1 | head -3)"
+  fi
   setting JAVA_HOME "$STATE_DIR/jdk"
 }
 

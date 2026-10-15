@@ -315,15 +315,48 @@ if [ "$rc" -eq 0 ] && grep -qxF "JAVA_HOME=$work/home/.rea-installer/jdk" "$work
 else
   bad "JAVA-02 Linux install_jdk replaces a broken ~/.rea-installer/jdk on rerun"; show
 fi
-# An archive whose bin/java sits one level deeper (the accepted unpack layout limitation) never becomes the trusted JDK.
+# Adoptium's release_name can differ from the archive's top folder, which puts bin/java one level deeper (WR-04).
 fresh_home
 mkjdk "$work/home/.rea-installer/tools/jdk-21.0.5+11/nested" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$LINUX" 'unset JAVA_HOME; install_jdk; printf "JAVA_HOME=%s\n" "$JAVA_HOME"'
+if [ "$rc" -eq 0 ] && grep -qxF "JAVA_HOME=$work/home/.rea-installer/jdk" "$work/out" &&
+  [ -x "$work/home/.rea-installer/jdk/bin/java" ] && [ ! -e "$work/home/.rea-installer/tools/jdk-21.0.5+11" ]; then
+  ok "JAVA-02 Linux install_jdk uses a Temurin archive whose bin/java is one level deeper"
+else
+  bad "JAVA-02 Linux install_jdk uses a Temurin archive whose bin/java is one level deeper"; show
+fi
+# Any other layout never becomes the trusted JDK, and the message asks for a report: a rerun repeats the same download.
+fresh_home
+mkdir -p "$work/home/.rea-installer/tools/jdk-21.0.5+11/nested"
+touch "$work/home/.rea-installer/tools/jdk-21.0.5+11/nested/README"
 sandbox "$LINUX" 'unset JAVA_HOME; install_jdk; echo continued'
-if [ "$rc" -ne 0 ] && grep -qF 'has no bin/java' "$work/out" && ! grep -qx continued "$work/out" &&
+if [ "$rc" -ne 0 ] && grep -qF 'has no bin/java' "$work/out" && grep -qF 'report this' "$work/out" && ! grep -qx continued "$work/out" &&
   [ ! -e "$work/home/.rea-installer/jdk" ] && [ ! -e "$work/home/.rea-installer/tools/jdk-21.0.5+11" ]; then
   ok "JAVA-02 Linux install_jdk stops on a Temurin archive without bin/java"
 else
   bad "JAVA-02 Linux install_jdk stops on a Temurin archive without bin/java"; show
+fi
+fresh_home
+mkjdk "$work/home/.rea-installer/tools/jdk-21.0.5+11" "echo 'Error: Could not create the Java Virtual Machine.' >&2; exit 1"
+sandbox "$LINUX" 'unset JAVA_HOME; install_jdk; echo continued'
+if [ "$rc" -ne 0 ] && grep -qF 'does not run' "$work/out" && grep -qF 'Could not create the Java Virtual Machine' "$work/out" &&
+  ! grep -qx continued "$work/out"; then
+  ok "JAVA-02 Linux install_jdk shows java -version output when its JDK does not run"
+else
+  bad "JAVA-02 Linux install_jdk shows java -version output when its JDK does not run"; show
+fi
+# An empty release would make unpack target $TOOLS_DIR itself (IN-05). Last in this section: it replaces the node stub.
+stub node 'cat >/dev/null; echo https://example.invalid/OpenJDK21U-jdk.tar.gz 00'
+fresh_home
+mkdir -p "$work/home/.rea-installer/tools"
+touch "$work/home/.rea-installer/tools/keep"
+sandbox "$LINUX" 'unset JAVA_HOME; install_jdk; echo continued'
+if [ "$rc" -ne 0 ] && grep -qF 'could not read the Temurin 21 release' "$work/out" && ! grep -qx continued "$work/out" &&
+  [ -e "$work/home/.rea-installer/tools/keep" ]; then
+  ok "JAVA-02 Linux install_jdk stops on an empty Temurin release and keeps the tools folder"
+else
+  bad "JAVA-02 Linux install_jdk stops on an empty Temurin release and keeps the tools folder"; show
 fi
 rm -f "$STUBS/curl" "$STUBS/node"
 
