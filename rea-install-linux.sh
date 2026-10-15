@@ -310,9 +310,14 @@ profile_file() {
 }
 
 remove_profile_block() {
-  local file="$1"
+  local file="$1" tmp
   [ -f "$file" ] && grep -qxF "$PROFILE_BEGIN" "$file" || return 0
-  run sed -i "/^$PROFILE_BEGIN\$/,/^$PROFILE_END\$/d" "$file"
+  # An in-place sed edit fails on (BSD) or replaces (GNU) a symlinked profile such as a dotfiles link;
+  # cp writes through the link and keeps the target's mode.
+  tmp="$(mktemp)"
+  sed "/^$PROFILE_BEGIN\$/,/^$PROFILE_END\$/d" "$file" >"$tmp"
+  run cp "$tmp" "$file"
+  rm -f "$tmp"
 }
 
 # ---------------------------------------------------------------- install

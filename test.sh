@@ -131,11 +131,11 @@ for script in "$LINUX" "$MACOS"; do
   # shellcheck disable=SC2016  # expanded inside the sandbox
   sandbox "$script" 'remove_profile_block "$HOME/.bashrc"'
   if [ "$rc" -eq 0 ] && [ -L "$work/home/.bashrc" ] && [ "$(readlink "$work/home/.bashrc")" = dotfiles/.bashrc ] &&
-    cmp -s "$target" "$work/profile.ref" && [ "$(ls -l "$target" | cut -c1-10)" = -rw------- ]; then
+    cmp -s "$target" "$work/profile.ref" && [ -n "$(find "$target" -perm 600)" ]; then
     ok "TEST-04 symlinked profile keeps link and other lines ($name)"
   else
     bad "TEST-04 symlinked profile keeps link and other lines ($name)"; sed 's/^/    /' "$work/out"
-    ls -l "$work/home/.bashrc" "$target" 2>&1 | sed 's/^/    /'
+    ls -l "$work/home/.bashrc" "$target"
   fi
   link_home
   # shellcheck disable=SC2016  # expanded inside the sandbox
@@ -144,7 +144,7 @@ for script in "$LINUX" "$MACOS"; do
     ok "TEST-04 symlinked profile dry run changes nothing ($name)"
   else
     bad "TEST-04 symlinked profile dry run changes nothing ($name)"; sed 's/^/    /' "$work/out"
-    ls -l "$work/home/.bashrc" "$target" 2>&1 | sed 's/^/    /'
+    ls -l "$work/home/.bashrc" "$target"
   fi
 done
 
