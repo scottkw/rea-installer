@@ -26,34 +26,40 @@ Installing and uninstalling must never leave the user's machine in a silently br
 - ✓ Failed package installs stop the install and are not recorded (HARD-02) — Phase 1
 - ✓ Linux `--dry-run` succeeds on a fresh machine and changes nothing (HARD-03, HARD-12) — Phase 1
 - ✓ Uninstall completes even when the `rea` CLI is broken (HARD-07) — Phase 1
-- ✓ Repeatable `test.sh`, run locally (HARD-08) — Phase 1; GitHub Actions removed by user decision in Phase 2
+- ✓ Repeatable `test.sh`, run locally (HARD-08) — v1; GitHub Actions removed by user decision in Phase 2
+- ✓ Windows sets `JAVA_HOME` from the Temurin it installed, not from the MSI (HARD-04) — v1
+- ✓ macOS respects an existing JDK 21+ `JAVA_HOME` and keeps its own across reruns (HARD-05, HARD-11) — v1
+- ✓ All platforms reject an existing `JAVA_HOME` older than JDK 21 (HARD-06) — v1
+- ✓ macOS installs without a terminal and under `--yes` with unattended Homebrew (HARD-09, HARD-10) — v1
+- ✓ README Status / Testing / Known limitations match the shipped behaviour (DOCS-01) — v1
 
 ### Active
 
-<!-- Installer hardening milestone. Source: .planning/AUDIT.md (HARD-01..HARD-12). -->
+<!-- Next milestone not yet defined. Candidates from v1 (see milestones/v1-REQUIREMENTS.md v2 section and ROADMAP Backlog): -->
 
-- [ ] Windows sets `JAVA_HOME` reliably after installing Temurin (HARD-04)
-- [ ] macOS respects an existing `JAVA_HOME` and keeps its own across reruns (HARD-05, HARD-11)
-- [ ] All platforms reject an existing `JAVA_HOME` older than JDK 21 (HARD-06)
-- [ ] Linux `unpack` fails loudly when an archive's top folder name doesn't match (WR-01, accepted in Phase 1; matters for Phase 2 `install_jdk`)
-- [ ] macOS polish: no-tty `rea setup`, non-interactive Homebrew under `--yes` (HARD-09, HARD-10)
-- [ ] README Status / Testing / Known limitations updated to match each fix
+- [ ] Real-machine install, rerun and uninstall on a Mac (VERI-01)
+- [ ] Real-machine install, rerun and uninstall on Windows x64 and ARM64 (VERI-02)
+- [ ] Pin `rea-agents` and hash-pin PyPI installs (SUPP-01, SUPP-02)
+- [ ] Backlog 999.1 / 999.2: no-npm dry run on macOS/Windows; Windows `JAVA_HOME` on an unavailable drive
 
 ### Out of Scope
 
 - Real-hardware verification on macOS and Windows — fixes are made from code analysis and dry runs; real-machine confirmation is a separate, later task (user decision)
 - Installing Binwalk, Unblob, pwndbg — no prebuilt binaries / too many separately pinned paths; feature work, not hardening
 - Sharing helper code between the two bash scripts — each must run standalone via `curl | bash`
-- Pinning `rea-agents` or hashing PyPI installs — supply-chain tightening is a separate decision, not part of this milestone
+- Pinning `rea-agents` or hashing PyPI installs — kept out of v1; now a v2 candidate (SUPP-01/02)
+- Linux `unpack` failing loudly on a top-folder mismatch (WR-01) — accepted as a known limitation; the JDK path handles it, other tools are documented in the README
 
 ## Context
 
-- Brownfield: codebase mapped in `.planning/codebase/` (corrected 2026-10-14 after `/code-review high`).
-- Findings source: `.planning/AUDIT.md` (`/ponytail-audit` + `/code-review high`, 2026-10-14). Each HARD item has location, scenario, fix and acceptance check.
+**Current state (after v1, 2026-10-15):** v1 Installer Hardening shipped. Installers + `test.sh` are 2,436 lines (Linux 666, macOS 493, Windows 342, `test.sh` 935). `test.sh` passes locally: 119 passed / 0 failed on macOS Bash 3.2, 85 passed / 0 failed in `ubuntu:24.04`.
+
+- Brownfield: codebase mapped in `.planning/codebase/` (2026-10-14).
+- Findings source for v1: `.planning/AUDIT.md` (HARD-01..12), all addressed or accepted.
 - Root cause behind HARD-01/02: bash turns `set -e` off inside `$(...)` and inside functions called on the left of `||`/`&&` or in an `if`. Verified under bash 3.2.57.
-- README status: Linux tested end to end in containers; macOS and Windows dry runs only.
-- `test.sh` (bash 3.2 and 5, ubuntu:24.04 container, pwsh parse) runs locally: `/bin/bash ./test.sh` on macOS and `./test.sh` in a Linux container. No GitHub Actions (removed in Phase 2 by user decision).
-- Known limitations accepted in Phase 1: WR-01 (unpack layout mismatch), WR-02 (Rizin/Wakaru trust an existing folder), WR-05 (partial package install records no deps) — see 01-REVIEW-DISPOSITION.md.
+- README status: Linux tested end to end in containers before v1's fixes; macOS and Windows are dry runs and `test.sh` only. No real macOS/Windows run yet (VERI-01/02).
+- Testing is local only: `/bin/bash ./test.sh` on macOS and `./test.sh` in a Linux container. No GitHub Actions.
+- Known technical debt: deferred review findings per phase (see `milestones/v1-MILESTONE-AUDIT.md`), all listed in README Known limitations; backlog 999.1 and 999.2.
 
 ## Constraints
 
@@ -67,13 +73,15 @@ Installing and uninstalling must never leave the user's machine in a silently br
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Scope milestone to AUDIT.md HARD-01..12 | Concrete, verified findings with acceptance checks | — Pending |
-| Fix macOS/Windows from code analysis, not real-hardware verification | No real-machine run in this milestone; tracked separately | — Pending |
+| Scope milestone to AUDIT.md HARD-01..12 | Concrete, verified findings with acceptance checks | ✓ Good — 19/19 requirements shipped in 2 days |
+| Fix macOS/Windows from code analysis, not real-hardware verification | No real-machine run in this milestone; tracked separately | ⚠️ Revisit — VERI-01/02 still needed before calling macOS/Windows tested |
 | `test.sh` runs locally and in GitHub Actions | Catch regressions on every push, not just before release | Superseded 2026-10-14: GitHub Actions removed; see the next row |
 | No GitHub Actions; all testing is local | User decision at Phase 2 UAT | ✓ Good |
-| Accept WR-01, WR-02, WR-05 as known limitations | UAT decision; fix cost outweighed risk before Phase 2 | — Pending |
-| README kept in sync with each fix | README makes specific status/limitation claims users rely on | — Pending |
-| One "reuse JDK ≥21, else install our own" rule on all platforms | Linux trusts any JAVA_HOME, macOS overrides it — make them consistent | — Pending |
+| Accept WR-01, WR-02, WR-05 as known limitations | UAT decision; fix cost outweighed risk before Phase 2 | ✓ Good — documented in README; JDK layout case fixed in Phase 2 |
+| README kept in sync with each fix | README makes specific status/limitation claims users rely on | ✓ Good — verified once in Phase 3, plus accepted findings at close |
+| One "reuse JDK ≥21, else install our own" rule on all platforms | Linux trusts any JAVA_HOME, macOS overrides it — make them consistent | ✓ Good — took 10 plans; ownership by ledger, not caller's shell |
+| Write regression checks red before each fix | Prove each check can fail | ✓ Good — caught weak checks (e.g. winget ledger) |
+| Lean Phase 3 close: defer WR-02..07 as accepted, documented in README | User decision; revisit with VERI-01 | — Pending |
 
 ## Evolution
 
@@ -93,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-14 after Phase 1*
+*Last updated: 2026-10-15 after v1 milestone*
