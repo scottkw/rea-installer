@@ -1,0 +1,28 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Loud Failures, Safe Dry Run, and Regression Tests",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "Consistent Java Handling",
+      "status": "complete"
+    },
+    {
+      "number": "3",
+      "name": "macOS Unattended Install and README Sync",
+      "status": "complete"
+    }
+  ],
+  "next": {
+    "command": "/gsd:new-milestone",
+    "label": "Start a new milestone",
+    "reason": "All phases complete — start a new milestone"
+  },
+  "updated_at": "2026-10-15T14:39:17.695Z"
+}
