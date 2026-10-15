@@ -376,8 +376,9 @@ install_jdk() {
       fi
     fi
   fi
+  # Picked up lines are dropped: they can carry credentials and push the real error out of view (T-02-02).
   if [ "$dry_run" = false ] && ! jdk_usable "$STATE_DIR/jdk"; then
-    die "the JDK at $STATE_DIR/jdk does not run; java -version printed: $("$STATE_DIR/jdk/bin/java" -version 2>&1 | head -3)"
+    die "the JDK at $STATE_DIR/jdk does not run; java -version printed: $("$STATE_DIR/jdk/bin/java" -version 2>&1 | grep -v '^Picked up' | head -3)"
   fi
   setting JAVA_HOME "$STATE_DIR/jdk"
 }
