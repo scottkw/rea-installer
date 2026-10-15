@@ -628,6 +628,44 @@ fresh_home
 sandbox "$LINUX" 'TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=false; register_agents /x/rea; echo continued'
 if [ "$rc" -eq 0 ] && grep -qxF "warning: no terminal available; run '/x/rea setup' yourself." "$work/out" &&
   grep -qxF continued "$work/out" && ! grep -q '^  \$ /x/rea' "$work/out"; then ok "$n"; else bad "$n"; show; fi
+# The PATH leaves out any real brew; curl is stubbed so Homebrew's real installer is never fetched.
+stub curl 'echo "echo brew-installer"'
+n="MAC-02 macOS --yes installs Homebrew with NONINTERACTIVE=1 after sudo -v"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/tty-yes"; dry_run=true; assume_yes=true; install_homebrew; echo continued'
+s="$(grep -nxF '  $ sudo -v' "$work/out" | cut -d: -f1)"
+e="$(grep -n '^  \$ env NONINTERACTIVE=1 /bin/bash -c ' "$work/out" | head -1 | cut -d: -f1)"
+if [ "$rc" -eq 0 ] && [ -n "$s" ] && [ -n "$e" ] && [ "$s" -lt "$e" ] && grep -qxF continued "$work/out"; then ok "$n"; else bad "$n"; show; fi
+n="MAC-02 macOS --yes without a terminal skips sudo -v"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/no-tty"; dry_run=true; assume_yes=true; install_homebrew; echo continued'
+if [ "$rc" -eq 0 ] && grep -q '^  \$ env NONINTERACTIVE=1 /bin/bash -c ' "$work/out" && ! grep -qxF '  $ sudo -v' "$work/out" &&
+  grep -qxF continued "$work/out"; then ok "$n"; else bad "$n"; show; fi
+n="MAC-02 macOS Homebrew without --yes is not forced non-interactive"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/tty-yes"; dry_run=true; assume_yes=false; install_homebrew; echo continued'
+if [ "$rc" -eq 0 ] && grep -q '^  \$ /bin/bash -c ' "$work/out" && ! grep -qF NONINTERACTIVE "$work/out" &&
+  ! grep -qxF '  $ sudo -v' "$work/out" && grep -qxF continued "$work/out"; then ok "$n"; else bad "$n"; show; fi
+# Real runs: curl's stub script only exits, so neither Homebrew's installer nor sudo runs, and TTY_PATH points at a
+# missing path so sudo -v is never planned outside a dry run (the sudo stub from FAIL-02 is still on PATH).
+stub curl 'echo "exit 1"'
+n="MAC-02 macOS failed Homebrew install stops with a sudo hint and records nothing"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/no-tty"; dry_run=false; assume_yes=true; install_homebrew; echo continued'
+if [ "$rc" -ne 0 ] && grep -qxF "error: Homebrew install failed; it needs sudo. Run 'sudo -v' and rerun, or install Homebrew first." "$work/out" &&
+  ! grep -qxF continued "$work/out" && ! grep -qx homebrew "$work/home/.rea-installer/installed" 2>/dev/null; then ok "$n"; else bad "$n"; show; fi
+stub curl 'exit 22'
+n="MAC-02 macOS failed Homebrew download stops and records nothing"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/no-tty"; dry_run=false; assume_yes=false; install_homebrew; echo continued'
+if [ "$rc" -ne 0 ] && grep -qxF 'error: could not download the Homebrew installer.' "$work/out" && ! grep -q '^  \$ /bin/bash -c' "$work/out" &&
+  ! grep -qxF continued "$work/out" && ! grep -qx homebrew "$work/home/.rea-installer/installed" 2>/dev/null; then ok "$n"; else bad "$n"; show; fi
+rm -f "$STUBS/curl"
 
 # ---------------------------------------------------------------- DRY-01/02 fresh container
 # A fresh ubuntu:24.04 has no curl or Node; --network none proves the dry run downloads nothing.
