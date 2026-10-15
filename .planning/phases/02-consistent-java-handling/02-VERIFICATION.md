@@ -1,8 +1,17 @@
 ---
 phase: 02-consistent-java-handling
 verified: 2026-10-15T02:23:48Z
-status: gaps_found
-score: 51/56 must-haves verified
+status: passed
+score: 54/56 must-haves verified (2 need real Windows, VERI-02)
+closure:
+  closed_at: "2026-10-14"
+  closed_by: "quick task 261014-tvi plus backlog 999.2, user decision; no re-run of the verifier"
+  gaps_closed:
+    - "G-02-1 / CR-301: filter is grep -Ev '^(NOTE: )?Picked up '; test uses the real NOTE: line with the secret in it, red first (fea0cd9, 38036da)"
+    - "G-02-3 / WR-301: write_profile always calls remove_profile_block and unsets a session JAVA_HOME equal to the dead owned JDK; Darwin test with an existing block and nothing queued, red first (b948538, 232256c)"
+  deferred:
+    - "WR-302 (Windows Join-Path on an unavailable drive) and IN-302 moved to backlog 999.2: stops loudly, narrow trigger"
+  local_runs: "macOS /bin/bash ./test.sh 97 passed 0 failed 2 skipped; ubuntu:24.04 ./test.sh 63 passed 0 failed 12 skipped; shellcheck clean"
 covered_files:
   - ".planning/phases/02-consistent-java-handling/02-01-PLAN.md"
   - ".planning/phases/02-consistent-java-handling/02-01-SUMMARY.md"
@@ -31,7 +40,7 @@ covered_files:
   - "rea-install-macos.sh"
   - "rea-install-windows.ps1"
   - "test.sh"
-covered_digest: "v3:sha256:cfedafb24a4c97c44df48b2f86a9161f1c94d0d29cc591a2d2a6efd172ceb4c5"
+covered_digest: "v3:sha256:d46951d8e0ed7c22b1d2dad6608eb9094252b78e9ae32eec8bf7f9f19b563a72"
 behavior_unverified: 0
 overrides_applied: 1
 overrides:
@@ -251,3 +260,13 @@ Closed in this round: G-02-2, G-02-4, G-02-5 and G-02-6, plus the earlier human 
 
 _Verified: 2026-10-15T02:23:48Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Gap closure (2026-10-14)
+
+The two failed truths above were fixed afterwards by quick task 261014-tvi, at the user's direction, without another review/verify round. The status above was set by the orchestrator on that basis; the verifier was not re-run.
+
+- **G-02-1 (CR-301):** `rea-install-linux.sh` now filters `grep -Ev '^(NOTE: )?Picked up '`. The test.sh fixture prints the real `NOTE: Picked up JDK_JAVA_OPTIONS:` line with the secret in it and failed before the fix (fea0cd9, 38036da).
+- **G-02-3 (WR-301):** `write_profile` calls `remove_profile_block` on every run and unsets a session `JAVA_HOME` equal to the dead owned JDK. A Darwin test with an existing block and nothing queued failed in both shell modes before the fix (b948538, 232256c). Side effect accepted by the user: a rerun that queues nothing also drops extras lines from an earlier `--with-extras` run.
+- **Regression WR-302 and IN-302 (Windows):** deferred to backlog 999.2.
+
+Local runs after the fix: macOS `/bin/bash ./test.sh` 97 passed, 0 failed, 2 skipped; ubuntu:24.04 `./test.sh` 63 passed, 0 failed, 12 skipped; shellcheck clean. Real macOS and Windows runs remain VERI-02.

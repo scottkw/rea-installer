@@ -13,7 +13,7 @@ This milestone hardens the three existing installer scripts so they never leave 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Loud Failures, Safe Dry Run, and Regression Tests** - Failed extracts/package installs stop loudly, dry runs change nothing, uninstall survives a broken `rea`, all guarded by `test.sh` in CI (completed 2026-10-14)
-- [ ] **Phase 2: Consistent Java Handling** - Reuse an existing JDK 21+ `JAVA_HOME` on Linux, macOS and Windows, otherwise install and record our own, and keep it across reruns
+- [x] **Phase 2: Consistent Java Handling** - Reuse an existing JDK 21+ `JAVA_HOME` on Linux, macOS and Windows, otherwise install and record our own, and keep it across reruns (completed 2026-10-14)
 - [ ] **Phase 3: macOS Unattended Install and README Sync** - macOS install works without a terminal and under `--yes`; README Status/Testing/Known limitations match the milestone
 
 ## Phase Details
@@ -59,7 +59,7 @@ Plans:
   3. On macOS, two `install --with-extras` (or `--with-android`) runs in a row leave exactly one profile block that still exports `JAVA_HOME` pointing at the script's `openjdk@21`
   4. On Windows, after Temurin is installed, `JAVA_HOME` is set for the session to the Temurin 21 folder (derived from the `java` now on PATH) and saved as a user variable that `uninstall` removes, whether or not the MSI set it; confirmed by code review and the `test.sh` PowerShell parse, with real-Windows confirmation deferred to VERI-02
 
-**Plans**: 10/10 plans executed
+**Plans**: 10/10 plans complete
 Plans:
 **Wave 1**
 - [x] 02-01-PLAN.md — Linux tracer: `jdk_usable` (both bash scripts), Linux `install_jdk` reuses only JDK 21+, predicate table and single-JDK dry-run checks
@@ -106,7 +106,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | Complete    | 2026-10-14 |
-| 2. Consistent Java Handling | 10/10 | In Progress | - |
+| 2. Consistent Java Handling | 10/10 | Complete    | 2026-10-14 |
 | 3. macOS Unattended Install and README Sync | 0/TBD | Not started | - |
 
 ## Backlog
@@ -118,3 +118,12 @@ Phases execute in numeric order: 1 → 2 → 3
 **Deferred at:** 2026-10-14 during /gsd-verify-work 02 session completion
 **Follow-ups:**
 - [ ] Test 5: Review IN-02: dry runs on a machine without npm die at npm prefix --global (macOS rea-install-macos.sh:308, Windows rea-install-windows.ps1:266); use a placeholder prefix in dry run as Linux does with NPM_PREFIX (deferred 2026-10-14)
+
+### Phase 999.2: Follow-up — Phase 02 deferred review findings: Windows JAVA_HOME path checks (BACKLOG)
+
+**Goal:** Resolve the Windows review findings deferred when Phase 02 closed
+**Source phase:** 02
+**Deferred at:** 2026-10-14 after quick task 261014-tvi
+**Follow-ups:**
+- [ ] WR-302: a `JAVA_HOME` on an unavailable drive makes `Join-Path` throw "Cannot find drive" under Stop (rea-install-windows.ps1 `Test-JdkUsable` ~line 88 and the replace rule ~line 205); build the path with `[IO.Path]::Combine` and add a `Q:\` driver case
+- [ ] IN-302: `Set-UserEnv` replace message hard-codes "has no java.exe"; pass the reason in or move the wording to the caller

@@ -127,8 +127,28 @@ findings:
     severity: info
     disposition: deferred
     title: "The dry-run fallback warning prints once per `jdk_home` call"
+  - id: CR-301
+    severity: critical
+    disposition: fixed
+    title: "The Linux \"does not run\" error still prints `JDK_JAVA_OPTIONS`, including proxy passwords, because real JDKs prefix that line with `NOTE: `"
+  - id: WR-301
+    severity: warning
+    disposition: fixed
+    title: "On a plain macOS `--no-ghidra` rerun, a dead owned JDK stays in the profile even though the warning says it was left out, and `rea setup` still receives it"
+  - id: WR-302
+    severity: warning
+    disposition: deferred
+    title: "A `JAVA_HOME` on a drive that is not available crashes the Windows install with \"Cannot find drive\""
+  - id: IN-301
+    severity: info
+    disposition: fixed
+    title: "The macOS warning tells the user to \"Rerun without --no-ghidra\", which installs Ghidra they opted out of"
+  - id: IN-302
+    severity: info
+    disposition: deferred
+    title: "`Set-UserEnv` is a generic helper, but its replace message now hard-codes `java.exe`"
 open: 0
-total: 31
+total: 36
 recorded: 2026-10-15T00:59:53.133Z
 ---
 
@@ -167,6 +187,11 @@ recorded: 2026-10-15T00:59:53.133Z
 | WR-203 | warning | fixed | fixed in 02-06 (2fd5825) Restored from e1ada43, where it was WR-03. |
 | IN-201 | info | deferred | accepted 2026-10-14: pre-existing no-brew dry-run path, out of phase scope. Restored from e1ada43, where it was IN-01. |
 | IN-202 | info | deferred | accepted 2026-10-14: pre-existing no-brew dry-run path, out of phase scope. Restored from e1ada43, where it was IN-02. |
+| CR-301 | critical | fixed | fixed in quick 261014-tvi (38036da) Review eec97a5, where it was CR-01. |
+| WR-301 | warning | fixed | fixed in quick 261014-tvi (232256c) Review eec97a5, where it was WR-01. |
+| WR-302 | warning | deferred | accepted 2026-10-14: stops loudly, narrow trigger (missing mapped or removable drive); backlog 999.2. Review eec97a5, where it was WR-02. |
+| IN-301 | info | fixed | fixed in quick 261014-tvi (232256c) Review eec97a5, where it was IN-01. |
+| IN-302 | info | deferred | accepted 2026-10-14: wording only; backlog 999.2. Review eec97a5, where it was IN-02. |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
