@@ -547,7 +547,9 @@ if need pwsh "Windows checks (pwsh)"; then
 param([string]$Script, [string]$Work, [string]$Jdks, [string]$Temurin)
 . $Script *> $null
 # On Unix pwsh the Machine and User Path read as empty, so the real one would set PATH to ';'.
-function Update-SessionPath {}
+# The stub records the call so the dry-run check can see it.
+function Update-SessionPath { $script:PathRefreshed = $true }
+$PathRefreshed = $false
 # Unix pwsh has no User scope: a test sets $env:REA_TEST_USER_<NAME> to play the user's saved value.
 function Get-UserEnv([string]$Name) { return [Environment]::GetEnvironmentVariable("REA_TEST_USER_$Name") }
 $ToolsDir = Join-Path $Work 'tools'
@@ -586,12 +588,14 @@ $env:JAVA_HOME = Join-Path $Jdks '21.0.5'
 try { Install-Jdk } catch { Write-Host "caught: $_" }
 Report (($env:JAVA_HOME -eq (Join-Path $Jdks '21.0.5')) -and -not (Test-Path $StateFile)) 'JAVA-02 Windows Install-Jdk reuses a JDK 21 JAVA_HOME'
 
+$PathRefreshed = $false
 $DryRun = $true
 $env:JAVA_HOME = Join-Path $Jdks '17'
 $second = @('not run')
 # The second call must print nothing: no false warning, no second winget plan.
 try { Install-Jdk; $second = @(Install-Jdk *>&1) } catch { Write-Host "caught: $_" }
 Report (($env:JAVA_HOME -eq (Join-Path $Jdks '17')) -and ($second.Count -eq 0) -and -not (Test-Path $StateFile)) 'JAVA-01 Windows Install-Jdk -DryRun leaves JAVA_HOME unchanged and records nothing'
+Report (-not $PathRefreshed) 'JAVA-01 Windows Install-Jdk -DryRun leaves the session PATH alone'
 # The script is dot-sourced, so its script-scope $JdkPlanned lives here and must be reset for later cases.
 $DryRun = $false
 $JdkPlanned = $false

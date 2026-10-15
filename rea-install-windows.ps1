@@ -108,6 +108,7 @@ function Install-Winget([string]$Id) {
     }
     Invoke-Step winget @('install', '--id', $Id, '--exact', '--silent',
                          '--accept-package-agreements', '--accept-source-agreements')
+    if ($DryRun) { return }
     Add-Record "winget:$Id"
     Update-SessionPath
 }
