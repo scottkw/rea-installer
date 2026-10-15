@@ -103,3 +103,13 @@ Phases execute in numeric order: 1 → 2 → 3
 | 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | Complete    | 2026-10-14 |
 | 2. Consistent Java Handling | 7/7 | In Progress | - |
 | 3. macOS Unattended Install and README Sync | 0/TBD | Not started | - |
+
+## Backlog
+
+### Phase 999.1: Follow-up — Phase 02 deferred UAT follow-up: Test 5 (BACKLOG)
+
+**Goal:** Resolve the UAT checkpoint deferred during Phase 02 verification
+**Source phase:** 02
+**Deferred at:** 2026-10-14 during /gsd-verify-work 02 session completion
+**Follow-ups:**
+- [ ] Test 5: Review IN-02: dry runs on a machine without npm die at npm prefix --global (macOS rea-install-macos.sh:308, Windows rea-install-windows.ps1:266); use a placeholder prefix in dry run as Linux does with NPM_PREFIX (deferred 2026-10-14)
