@@ -702,7 +702,7 @@ try { $out = @(Install-Jdk *>&1 | ForEach-Object { "$_" }) } catch { Write-Host 
 Report (($env:JAVA_HOME -eq $Temurin) -and
         @($out | Where-Object { $_.Contains('setx JAVA_HOME') -and $_.Contains($Temurin) }).Count -gt 0 -and
         @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -eq 0 -and
-        @($out | Where-Object { $_.Contains('no longer exists') }).Count -gt 0 -and
+        @($out | Where-Object { $_.Contains('has no java.exe') }).Count -gt 0 -and
         @($out | Where-Object { $_.Contains('by this script') }).Count -eq 0) 'JAVA-01 Windows Install-Jdk replaces a stale user JAVA_HOME it set earlier'
 $out | ForEach-Object { Write-Host $_ }
 $env:PATH = $savedPath
@@ -738,6 +738,25 @@ try { $out = @(Install-Jdk *>&1 | ForEach-Object { "$_" }) } catch { Write-Host 
 Report (($env:JAVA_HOME -eq $Temurin) -and
         @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -gt 0 -and
         @($out | Where-Object { $_.Contains('setx JAVA_HOME') }).Count -eq 0) 'JAVA-01 Windows Install-Jdk keeps an existing user JAVA_HOME even when it set one earlier'
+$out | ForEach-Object { Write-Host $_ }
+$env:PATH = $savedPath
+Remove-Item env:REA_TEST_USER_JAVA_HOME -ErrorAction SilentlyContinue
+
+# The MSI can leave the old folder behind without java.exe, which still counts as dead (WR-02).
+$savedPath = $env:PATH
+New-Item -ItemType Directory -Force $StateDir | Out-Null
+Set-Content -Path $StateFile -Value 'env:JAVA_HOME'
+$leftover = Join-Path $Work 'leftover/jdk-21.0.4.7-hotspot'
+New-Item -ItemType Directory -Force (Join-Path $leftover 'lib') | Out-Null
+$env:REA_TEST_USER_JAVA_HOME = $leftover
+$env:JAVA_HOME = $leftover
+$env:PATH = (Join-Path $Temurin 'bin') + [IO.Path]::PathSeparator + $env:PATH
+$out = @()
+try { $out = @(Install-Jdk *>&1 | ForEach-Object { "$_" }) } catch { Write-Host "caught: $_" }
+Report (($env:JAVA_HOME -eq $Temurin) -and
+        @($out | Where-Object { $_.Contains('setx JAVA_HOME') -and $_.Contains($Temurin) }).Count -gt 0 -and
+        @($out | Where-Object { $_.Contains('has no java.exe') }).Count -gt 0 -and
+        @($out | Where-Object { $_.Contains('leaving it as-is') }).Count -eq 0) 'JAVA-01 Windows Install-Jdk replaces a saved JAVA_HOME it set whose folder has no java.exe'
 $out | ForEach-Object { Write-Host $_ }
 $env:PATH = $savedPath
 Remove-Item env:REA_TEST_USER_JAVA_HOME -ErrorAction SilentlyContinue
