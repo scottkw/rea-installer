@@ -234,7 +234,8 @@ A few checks use BSD or GNU tools and run only on the matching OS, so the two ru
 
 > **Not yet run on a real machine:**
 > - a full install on macOS (it would have changed the tester's own agent configuration);
-> - anything on real Windows, including the `winget` installs, Temurin setting `JAVA_HOME`, WinLibs putting `objdump` on `PATH`, and the registry check that detects ARM64.
+> - an unattended macOS install (`--yes`, or no terminal), including Homebrew's own installer running non-interactively;
+> - anything on real Windows, including the `winget` installs, the `JAVA_HOME` the script derives from the Temurin it installs, WinLibs putting `objdump` on `PATH`, and the registry check that detects ARM64.
 >
 > Run with `--dry-run` first, and please open an issue if something doesn't work.
 
@@ -254,6 +255,13 @@ A few checks use BSD or GNU tools and run only on the matching OS, so the two ru
 - **Arch Linux:** the script won't partially sync pacman's database. If it has never been synced, run `sudo pacman -Syu` first.
 - **Hopper on Linux:** `rea setup` installs Hopper's own package dependencies (Xvfb and others). Uninstall removes the Hopper package but not those dependencies.
 - **Python packages:** pinned by version, not by hash.
+- **Unattended macOS install:** the Xcode Command Line Tools must already be installed (the script stops and asks you to finish their installer dialog, then rerun). Without a terminal, Homebrew must already be installed or sudo must need no password, because sudo can't reuse a password cached in another terminal. Without a terminal and without `--yes`, `rea setup` is skipped with a warning and uninstall prompts are answered no. Piped into bash without `--yes`, Homebrew's installer also runs non-interactively and needs a cached sudo ticket: run `sudo -v` first, or pass `--yes`.
+- **Dry run without Node.js (macOS and Windows):** a dry run on a Mac or Windows PC without Node.js stops at the npm step (on a Mac without Homebrew, at the Node.js step) instead of printing the whole plan.
+- **Linux pinned-download layout:** if a pinned download's top-level folder ever differs from the expected name, the tool is unpacked one folder deeper and its setting points at the wrong place; the install does not stop. The JDK is checked and handled.
+- **Linux Rizin and Wakaru folders:** an existing `~/.rea-installer/tools/rizin-0.9.1` or `wakaru-1.14.0` folder is reused without checking the binary inside. If REA can't find Rizin or Wakaru, delete the folder and rerun.
+- **Partial package installs (Linux and macOS):** if a package install fails partway, the dependencies it already installed aren't recorded, so uninstall leaves them.
+- **Windows `JAVA_HOME`:** if a Temurin upgrade leaves the old folder (with `java.exe`) in place, the user `JAVA_HOME` the script saved keeps pointing at it, while the install run and `rea setup` use the new JDK. If you already had a user `JAVA_HOME` set to an older JDK, the script warns and leaves it, so programs other than this run and `rea setup` keep seeing yours. Uninstall removes the user `JAVA_HOME` the script set, even if you repointed it afterwards.
+- **JDK check:** the scripts accept any `JAVA_HOME` whose `java -version` reports 21 or newer, so a JRE 21 is reused even though Ghidra needs a full JDK.
 
 ## Attribution
 
