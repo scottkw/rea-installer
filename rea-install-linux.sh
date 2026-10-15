@@ -377,8 +377,9 @@ install_jdk() {
     fi
   fi
   # Picked up lines are dropped: they can carry credentials and push the real error out of view (T-02-02).
+  # The launcher prefixes the JDK_JAVA_OPTIONS line with "NOTE: ", so the prefix is optional.
   if [ "$dry_run" = false ] && ! jdk_usable "$STATE_DIR/jdk"; then
-    die "the JDK at $STATE_DIR/jdk does not run; java -version printed: $("$STATE_DIR/jdk/bin/java" -version 2>&1 | grep -v '^Picked up' | head -3)"
+    die "the JDK at $STATE_DIR/jdk does not run; java -version printed: $("$STATE_DIR/jdk/bin/java" -version 2>&1 | grep -Ev '^(NOTE: )?Picked up ' | head -3)"
   fi
   setting JAVA_HOME "$STATE_DIR/jdk"
 }
