@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Consistent Java Handling
 status: executing
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-10-15T00:50:50.687Z"
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-10-15T02:03:06.399Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 02 execution started
-state_head: 43cc7958b4f2ccceccedfeeb05370bdb22032bc2
+state_head: a2e64c67facfc22ab0dc1f78ce8f9810d0117e07
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
   percent: 33
 ---
 
@@ -68,6 +68,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P05 | 4 min | 3 tasks | 3 files |
 | Phase 02 P06 | 4min | 2 tasks | 3 files |
 | Phase 02 P07 | 3min | 3 tasks | 3 files |
+| Phase 02 P08 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Linux install_jdk moves a one-level-deeper Temurin bin/java folder into place; any other layout stops and asks for a report, not a rerun (WR-04)
 - [Phase 02]: Windows replaces a user JAVA_HOME only when the ledger holds env:JAVA_HOME and the saved folder no longer exists (WR-01, D-05)
 - [Phase 02]: Restored review decisions use 3-digit ids WR-101..WR-104 and IN-101..IN-105 so a re-review cannot collide with them
+- [Phase 02]: macOS write_profile: outside jdk_chosen the owned JDK must run before it is written; a dead owned JDK is left out with a warning, and a set non-21 JAVA_HOME is replaced only with the D-04 warning (WR-01, WR-03)
+- [Phase 02]: macOS jdk_owned counts only the script's own PROFILE_BEGIN..PROFILE_END block as ownership; a user export JAVA_HOME line is ignored (IN-01)
 
 ### Pending Todos
 
@@ -128,6 +131,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T00:50:50.641Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-10-15T02:03:00.139Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None
