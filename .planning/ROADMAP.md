@@ -59,7 +59,7 @@ Plans:
   3. On macOS, two `install --with-extras` (or `--with-android`) runs in a row leave exactly one profile block that still exports `JAVA_HOME` pointing at the script's `openjdk@21`
   4. On Windows, after Temurin is installed, `JAVA_HOME` is set for the session to the Temurin 21 folder (derived from the `java` now on PATH) and saved as a user variable that `uninstall` removes, whether or not the MSI set it; confirmed by code review and the `test.sh` PowerShell parse, with real-Windows confirmation deferred to VERI-02
 
-**Plans**: 9/10 plans executed
+**Plans**: 10/10 plans executed
 Plans:
 **Wave 1**
 - [x] 02-01-PLAN.md — Linux tracer: `jdk_usable` (both bash scripts), Linux `install_jdk` reuses only JDK 21+, predicate table and single-JDK dry-run checks
@@ -81,7 +81,7 @@ Plans:
 **Gap closure 3** *(from 02-UAT.md G-02-1..G-02-6)*
 - [x] 02-08-PLAN.md — Wave 1: macOS `write_profile` warns before replacing a set `JAVA_HOME` (G-02-2) and leaves out an owned JDK that does not run (G-02-3); `jdk_owned` reads only the script's block (G-02-5)
 - [x] 02-09-PLAN.md — Wave 2: Linux JDK error hides `Picked up` lines (G-02-1); Windows replaces a saved `JAVA_HOME` it set that has no `java.exe` (G-02-4); record the open review dispositions
-- [ ] 02-10-PLAN.md — Wave 3: remove the GitHub Actions workflow and describe testing as local runs (G-02-6)
+- [x] 02-10-PLAN.md — Wave 3: remove the GitHub Actions workflow and describe testing as local runs (G-02-6)
 
 **Notes**: HARD-04 rests on an unverified assumption about the Temurin MSI's `FeatureJavaHome` default; the fix must work either way. Audit open question worth checking here: whether REA finds Ghidra on macOS without `GHIDRA_INSTALL_DIR` (Homebrew cask install; script never sets it). The macOS JDK decision line (`[ -n "$JAVA_HOME" ] || install_jdk`) is touched by both FAIL-03 (Phase 1) and this phase.
 
@@ -106,7 +106,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | Complete    | 2026-10-14 |
-| 2. Consistent Java Handling | 9/10 | In Progress | - |
+| 2. Consistent Java Handling | 10/10 | In Progress | - |
 | 3. macOS Unattended Install and README Sync | 0/TBD | Not started | - |
 
 ## Backlog
