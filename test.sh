@@ -596,6 +596,77 @@ if [ "$rc" -eq 0 ] && grep -qxF "GHIDRA_INSTALL_DIR=$gdir" "$work/out" &&
 else
   bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
 fi
+# The rebuilt block must never drop the line on a rerun; rewriting the old block uses BSD sed -i ''.
+n="GHID-01 macOS rerun keeps exactly one GHIDRA_INSTALL_DIR line whether or not the shell has it set"
+if [ "$(uname -s)" = Darwin ]; then
+  # Homebrew linked ghidraRun into its bin on the first run, so install_ghidra takes its already-available branch.
+  stub ghidraRun 'exit 0'
+  all_ok=true
+  # shellcheck disable=SC2016  # expanded inside the sandbox
+  for mode in 'export GHIDRA_INSTALL_DIR="$gdir"' 'unset GHIDRA_INSTALL_DIR'; do
+    fresh_home
+    mkghidra
+    printf '%s\n' '# >>> rea-installer >>>' "export GHIDRA_INSTALL_DIR=\"$gdir\"" '# <<< rea-installer <<<' >"$work/home/.bash_profile"
+    sandbox "$MACOS" "PATH=\"\$STUBS:/usr/bin:/bin\"; unset JAVA_HOME; $mode; install_ghidra; ghidra_setting; write_profile"
+    if [ "$rc" -ne 0 ] || [ "$(grep -cx '# >>> rea-installer >>>' "$work/home/.bash_profile")" != 1 ] ||
+      [ "$(grep -c '^export GHIDRA_INSTALL_DIR=' "$work/home/.bash_profile")" != 1 ] ||
+      ! grep -qxF "export GHIDRA_INSTALL_DIR=\"$gdir\"" "$work/home/.bash_profile"; then
+      all_ok=false; printf '    mode: %s\n' "$mode"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+    fi
+  done
+  rm -f "$STUBS/ghidraRun"
+  if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; fi
+else
+  skip "$n (macOS only)"
+fi
+# The keg is present, so only the user-value guard explains a missing line.
+n="GHID-01 macOS leaves a user GHIDRA_INSTALL_DIR elsewhere alone and unwritten"
+fresh_home
+mkghidra
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; unset JAVA_HOME; export GHIDRA_INSTALL_DIR="$work/user-ghidra"; install_ghidra; ghidra_setting; profile_exports+=("export REA_TEST=1"); write_profile; printf "GHIDRA_INSTALL_DIR=%s\n" "$GHIDRA_INSTALL_DIR"'
+if [ "$rc" -eq 0 ] && grep -qxF "GHIDRA_INSTALL_DIR=$work/user-ghidra" "$work/out" &&
+  grep -qx 'export REA_TEST=1' "$work/home/.bash_profile" 2>/dev/null && ! grep -q '^export GHIDRA_INSTALL_DIR=' "$work/home/.bash_profile"; then
+  ok "$n"
+else
+  bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+fi
+n="GHID-01 macOS --no-ghidra writes no GHIDRA_INSTALL_DIR for a Ghidra it did not install"
+fresh_home
+mkghidra
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; with_ghidra=false; unset JAVA_HOME GHIDRA_INSTALL_DIR; ghidra_setting; profile_exports+=("export REA_TEST=1"); write_profile'
+if [ "$rc" -eq 0 ] && grep -qx 'export REA_TEST=1' "$work/home/.bash_profile" 2>/dev/null &&
+  ! grep -q '^export GHIDRA_INSTALL_DIR=' "$work/home/.bash_profile"; then
+  ok "$n"
+else
+  bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+fi
+# Same rerun trap as JAVA_HOME (WR-03): the ledger proves the script installed this Ghidra.
+n="GHID-01 macOS --no-ghidra rerun keeps GHIDRA_INSTALL_DIR for the Ghidra its ledger records"
+fresh_home
+mkghidra
+mkdir -p "$work/home/.rea-installer"
+printf 'brew:ghidra\n' >"$work/home/.rea-installer/installed"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; with_ghidra=false; unset JAVA_HOME GHIDRA_INSTALL_DIR; ghidra_setting; write_profile'
+if [ "$rc" -eq 0 ] && [ "$(grep -cxF "export GHIDRA_INSTALL_DIR=\"$gdir\"" "$work/home/.bash_profile" 2>/dev/null)" = 1 ]; then
+  ok "$n"
+else
+  bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+fi
+n="GHID-01 macOS dry run plans the GHIDRA_INSTALL_DIR line and writes nothing"
+fresh_home
+mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; dry_run=true; unset JAVA_HOME GHIDRA_INSTALL_DIR; install_ghidra; ghidra_setting; write_profile'
+if [ "$rc" -eq 0 ] && grep -qxF '  $ brew install ghidra' "$work/out" &&
+  grep -qxF "    export GHIDRA_INSTALL_DIR=\"$gdir\"" "$work/out" &&
+  [ ! -e "$work/home/.bash_profile" ] && [ ! -e "$work/home/.rea-installer/installed" ]; then
+  ok "$n"
+else
+  bad "$n"; show
+fi
 rm -f "$STUBS/brew" "$STUBS/ghidraRun"
 
 # ---------------------------------------------------------------- MAC-01/02 unattended install (no terminal, --yes)

@@ -253,8 +253,10 @@ install_ghidra() {
 
 # REA finds Ghidra only through GHIDRA_INSTALL_DIR, and rea setup in step 9 copies the session value into agent registrations.
 # write_profile rebuilds the block every run, so this runs on every install, reruns included.
+# Under --no-ghidra, ownership comes from the ledger: a rerun keeps the Ghidra the script installed, the trap JAVA_HOME hit (WR-03),
+# and a user's own Homebrew ghidra is not written.
 ghidra_setting() {
-  [ "$with_ghidra" = true ] || return 0
+  [ "$with_ghidra" = true ] || grep -qxF brew:ghidra "$STATE_FILE" 2>/dev/null || return 0
   # No Homebrew means no Homebrew ghidra to point at.
   [ "$ghidra_brewed" = true ] || command -v brew >/dev/null 2>&1 || return 0
   local dir
