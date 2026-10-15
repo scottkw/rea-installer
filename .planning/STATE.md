@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 current_phase: 03
 status: completed
 stopped_at: Phase 03 complete — all phases complete
-last_updated: "2026-10-15T14:39:17.665Z"
+last_updated: "2026-10-15T14:52:40.681Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 03 complete
-state_head: 340bd1e33f6083d413517e5717cd01209439aab8
+state_head: 4d3dc5c9e675a0ac5d04da739ea558bcdc60fcdb
 progress:
   total_phases: 3
   completed_phases: 3
@@ -141,6 +141,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 261014-tvi | Fix Linux Picked-up filter and macOS dead owned JAVA_HOME on --no-ghidra rerun | 2026-10-14 | 232256c | [261014-tvi-fix-linux-picked-up-filter-and-macos-dea](./quick/261014-tvi-fix-linux-picked-up-filter-and-macos-dea/) |
 | 261015-d2b | Close Phase 3 gaps: Homebrew PATH in macOS profile, sudo -k, two README fixes | 2026-10-15 | c013784 | [261015-d2b-close-phase-3-gaps-homebrew-path-in-maco](./quick/261015-d2b-close-phase-3-gaps-homebrew-path-in-maco/) |
+| 3 | Add accepted deferred v1 limitations to README | 2026-10-15 | 4d3dc5c | — |
 
 ## Deferred Items
 
