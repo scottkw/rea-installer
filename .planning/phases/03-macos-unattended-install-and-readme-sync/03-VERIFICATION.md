@@ -1,8 +1,8 @@
 ---
 phase: 03-macos-unattended-install-and-readme-sync
 verified: 2026-10-15T14:08:19Z
-status: gaps_found
-score: 18/20 must-haves verified
+status: passed
+score: 19/20 must-haves verified (gap closed by quick 261015-d2b; 1 backstop truth left to human review)
 covered_files:
   - .planning/phases/03-macos-unattended-install-and-readme-sync/03-01-PLAN.md
   - .planning/phases/03-macos-unattended-install-and-readme-sync/03-01-SUMMARY.md
@@ -12,12 +12,12 @@ covered_files:
   - rea-install-linux.sh
   - rea-install-macos.sh
   - test.sh
-covered_digest: "v3:sha256:ff0b70936b5fefbc02dcb9ccac7527da9d78ad55d0939bd4a9e5e7939e5af63a"
+covered_digest: "v3:sha256:a546a8fd1124d1cd5130400603e9934ac395ee6bae3c5081be02332a49c4d44c"
 behavior_unverified: 0
 overrides_applied: 0
 gaps:
   - truth: "An unattended `install --yes` on a Mac without Homebrew leaves a working REA: in the new terminal the script tells the user to open, `brew`, `node` and the printed `<rea_bin> doctor` health check run (derived from the phase goal 'completes unattended' and the core value 'never leave the machine silently broken'; review CR-01)"
-    status: failed
+    status: closed
     reason: "On Apple silicon, Homebrew installed by install_homebrew lives in /opt/homebrew/bin, which is not on macOS's default PATH (/etc/paths and /etc/paths.d on this Mac confirm it). Homebrew's install.sh only prints a 'Next steps' instruction to add `eval \"$(/opt/homebrew/bin/brew shellenv)\"` to ~/.zprofile (install.sh ~1167-1181, fetched and read as data); under NONINTERACTIVE that text is buried in the run. load_brew fixes PATH only for the current process. The macOS profile block (write_profile) carries only JAVA_HOME, REA_OBJDUMP_COMMAND and REA_WABT_BIN_DIRECTORY; unlike Linux (rea-install-linux.sh:457, :543) it never adds a PATH entry. So the run prints 'Done. Open a new terminal ... check health with: /opt/homebrew/bin/rea doctor' (rea-install-macos.sh:376), and in that new terminal node (a Homebrew formula on a fresh Mac) is not on PATH, so the npm launcher's `#!/usr/bin/env node` fails, as do brew and ghidraRun. The run completes; the install it produces is not usable. Pre-existing before this phase (the old step 2 had the same gap), but this phase makes the fresh-Mac --yes flow a supported path, so the goal's outcome is not met on the default Mac hardware. Intel Macs are unaffected (/usr/local/bin is on the default PATH)."
     artifacts:
       - path: "rea-install-macos.sh"
@@ -199,3 +199,14 @@ Even with the override, a Known limitations bullet is still needed, or DOCS-01's
 
 _Verified: 2026-10-15T14:08:19Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Gap Closure (2026-10-15)
+
+The one failed truth (CR-01) was closed by quick task 261015-d2b, by user decision instead of a gap-plan round:
+
+- 714dc7d: `write_profile` adds `eval "$(<brew prefix>/bin/brew shellenv)"` inside the profile block when this run installed Homebrew or the ledger records `homebrew` (`/opt/homebrew` on Apple silicon, `/usr/local` on Intel). New MAC-02 checks in test.sh cover: line written when recorded, absent when not, dry run plans it and writes nothing.
+- a79425e: `sudo -k` after Homebrew's installer when `sudo -v` cached a ticket (WR-01).
+- c013784: README fixes for WR-08 and IN-03, plus a Known limitations note on the shellenv line.
+
+Evidence: `/bin/bash ./test.sh` 119 passed, 0 failed, 2 skipped; ubuntu:24.04 container 85 passed, 0 failed, 12 skipped.
+Accepted, not fixed: a kept Homebrew loses its shellenv line when uninstall removes the profile block (T-q261015-03). Remaining review findings are deferred in 03-REVIEW-DISPOSITION.md. A real fresh-Mac run stays with VERI-01 (v2).

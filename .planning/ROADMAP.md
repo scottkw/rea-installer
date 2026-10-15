@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Loud Failures, Safe Dry Run, and Regression Tests** - Failed extracts/package installs stop loudly, dry runs change nothing, uninstall survives a broken `rea`, all guarded by `test.sh` in CI (completed 2026-10-14)
 - [x] **Phase 2: Consistent Java Handling** - Reuse an existing JDK 21+ `JAVA_HOME` on Linux, macOS and Windows, otherwise install and record our own, and keep it across reruns (completed 2026-10-14)
-- [ ] **Phase 3: macOS Unattended Install and README Sync** - macOS install works without a terminal and under `--yes`; README Status/Testing/Known limitations match the milestone
+- [x] **Phase 3: macOS Unattended Install and README Sync** - macOS install works without a terminal and under `--yes`; README Status/Testing/Known limitations match the milestone (completed 2026-10-15)
 
 ## Phase Details
 
@@ -96,7 +96,7 @@ Plans:
   2. macOS `install --yes` on a Mac without Homebrew runs the Homebrew installer non-interactively and never waits for Return
   3. README Status, Testing and Known limitations sections list each fix from this milestone, describe running `./test.sh` locally (`/bin/bash ./test.sh` on macOS, `./test.sh` in a Linux container), and still state that macOS and Windows are verified by dry run and lint only (real-machine runs pending)
 
-**Plans**: 2/2 plans executed
+**Plans**: 2/2 plans complete
 Plans:
 **Wave 1**
 - [x] 03-01-PLAN.md — Tracer: macOS install without a terminal skips `rea setup` with a warning; no-terminal uninstall prompts answer no in both bash scripts (`TTY_PATH`, `have_tty`, `confirm QUESTION ITEM`, `register_agents`); `install_homebrew` under `--yes` uses `sudo -v` + `NONINTERACTIVE=1` and records nothing on failure
@@ -113,7 +113,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Loud Failures, Safe Dry Run, and Regression Tests | 5/5 | Complete    | 2026-10-14 |
 | 2. Consistent Java Handling | 10/10 | Complete    | 2026-10-14 |
-| 3. macOS Unattended Install and README Sync | 2/2 | In Progress | - |
+| 3. macOS Unattended Install and README Sync | 2/2 | Complete    | 2026-10-15 |
 
 ## Backlog
 
