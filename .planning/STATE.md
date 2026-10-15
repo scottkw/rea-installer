@@ -2,10 +2,10 @@
 gsd_state_version: "1.0"
 status: Awaiting next milestone
 stopped_at: Phase 03 complete — all phases complete
-last_updated: "2026-10-15T18:58:03.044Z"
+last_updated: "2026-10-15T19:51:54.013Z"
 last_activity: 2026-10-15
 last_activity_desc: Milestone v1 completed and archived
-state_head: a19af934527dac062cdd98e6f3b61f62786ef3fa
+state_head: aec2a69593f6d173f0f1789649f94e7f6f14e7d8
 progress:
   total_phases: 3
   completed_phases: 3
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 Phase: Milestone v1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-10-15 — Completed quick task 261015-j8e: Fix installer rerun when shell profile is a symlink
+Last activity: 2026-10-15 — Completed fast task: Warn when rea setup registers no agent
 
 ## Performance Metrics
 
@@ -95,6 +95,7 @@ None.
 | 2 | Set HOMEBREW_NO_ASK=1 so Homebrew 7's prompt cannot hang --yes | 2026-10-15 | 8d870fe | — |
 | 3 | README: macOS VM test results, Linux full-run gap, npm/leftover limitations | 2026-10-15 | a29763c | — |
 | 261015-j8e | Fix installer rerun when shell profile is a symlink | 2026-10-15 | a19af93 | [261015-j8e-fix-installer-rerun-when-shell-profile-i](./quick/261015-j8e-fix-installer-rerun-when-shell-profile-i/) |
+| 5 | Warn when rea setup registers no agent | 2026-10-15 | aec2a69 | — |
 
 ## Deferred Items
 
