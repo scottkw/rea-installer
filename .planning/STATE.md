@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
 current_phase: 02
-current_phase_name: consistent-java-handling
-status: verifying
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-10-14T21:19:25.372Z"
+current_phase_name: Consistent Java Handling
+status: executing
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-10-15T00:46:24.044Z"
 last_activity: 2026-10-14
-last_activity_desc: Phase 2 execution started
-state_head: 085dd70c285915763d589ae7310f3eec73007809
+last_activity_desc: Phase 02 execution started
+state_head: d4021adae03ea0a1b0c69ab99a139889e4bae3ba
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
   percent: 33
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** Installing and uninstalling must never leave the user's machine in a silently broken or altered state: a failure stops loudly, a rerun recovers, and uninstall removes only what the script added.
-**Current focus:** Phase 2 — Consistent Java Handling
+**Current focus:** Phase 02 — Consistent Java Handling
 
 ## Current Position
 
-Phase: 02 (consistent-java-handling) — READY TO EXECUTE
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-10-14 — Phase 2 execution started
+Phase: 02 (Consistent Java Handling) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-10-14 — Phase 02 execution started
 
 Progress: [███░░░░░░░] 33%
 
@@ -66,6 +66,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P03 | 3 min | 2 tasks | 2 files |
 | Phase 02 P04 | 7 min | 3 tasks | 3 files |
 | Phase 02 P05 | 4 min | 3 tasks | 3 files |
+| Phase 02 P06 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Windows rerun replaces a user JAVA_HOME only when the ledger holds env:JAVA_HOME (CR-01); a value the script never set keeps D-05 warn-and-leave
 - [Phase 02]: Windows -DryRun changes no session variable: $JdkPlanned marks the planned JDK and Set-UserEnv returns before Set-Item (WR-03, supersedes D-09 placeholder)
 - [Phase 02]: Accepted review findings are stored as deferred with an 'accepted 2026-10-14:' Source cell, because the disposition gate resets other values to open
+- [Phase 02]: macOS write_profile keeps the script's JAVA_HOME by ownership (ledger brew:openjdk@21 or old block export) plus the usable-user-JDK check, never by the caller's shell (G-02-1)
+- [Phase 02]: Linux install_jdk moves a one-level-deeper Temurin bin/java folder into place; any other layout stops and asks for a report, not a rerun (WR-04)
 
 ### Pending Todos
 
@@ -122,6 +125,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T21:19:25.338Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-10-15T00:46:24.004Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None
