@@ -31,6 +31,7 @@ with_android=false
 with_extras=false
 profile_exports=()
 jdk_chosen=false # set when install_jdk points this run's JAVA_HOME at the script's own JDK
+brew_installed=false # set when install_homebrew ran this run; a dry run records nothing, so the ledger alone cannot tell
 
 log() { printf '==> %s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
@@ -246,6 +247,7 @@ install_homebrew() {
     run /bin/bash -c "$script" || die "$hint"
   fi
   record "homebrew"
+  brew_installed=true
   [ "$dry_run" = true ] || load_brew || die "Homebrew installed but brew was not found."
 }
 
@@ -278,6 +280,13 @@ write_profile() {
       export JAVA_HOME="$ours"
       profile_exports+=("export JAVA_HOME=\"$ours\"")
     fi
+  fi
+  # Homebrew's installer only prints this step, so without it new Apple silicon terminals have no brew, node or rea.
+  # It sits in the block so uninstall removes it with the block; the ledger check re-queues it because the block is rebuilt every run.
+  if [ "$brew_installed" = true ] || grep -qxF homebrew "$STATE_FILE" 2>/dev/null; then
+    local brew_bin
+    if [ "$(uname -m)" = arm64 ]; then brew_bin=/opt/homebrew/bin/brew; else brew_bin=/usr/local/bin/brew; fi
+    profile_exports+=("eval \"\$($brew_bin shellenv)\"")
   fi
   local profile
   profile="$(profile_file)"

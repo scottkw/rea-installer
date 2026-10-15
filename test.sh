@@ -649,6 +649,32 @@ fresh_home
 sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; TTY_PATH="$work/tty-yes"; dry_run=true; assume_yes=false; install_homebrew; echo continued'
 if [ "$rc" -eq 0 ] && grep -q '^  \$ /bin/bash -c ' "$work/out" && ! grep -qF NONINTERACTIVE "$work/out" &&
   ! grep -qxF '  $ sudo -v' "$work/out" && grep -qxF continued "$work/out"; then ok "$n"; else bad "$n"; show; fi
+shellenv="eval \"\$($p/bin/brew shellenv)\""
+n="MAC-02 macOS profile block puts a recorded Homebrew on PATH"
+fresh_home
+mkdir -p "$work/home/.rea-installer"
+printf 'homebrew\n' >"$work/home/.rea-installer/installed"
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; dry_run=false; write_profile'
+block="$(sed -n '/^# >>> rea-installer >>>$/,/^# <<< rea-installer <<<$/p' "$work/home/.bash_profile" 2>/dev/null)"
+if [ "$rc" -eq 0 ] && grep -qxF "$shellenv" <<<"$block" &&
+  grep -qxF "profile:$work/home/.bash_profile" "$work/home/.rea-installer/installed"; then
+  ok "$n"
+else
+  bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+fi
+n="MAC-02 macOS profile block has no shellenv line when Homebrew was not installed by the script"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; dry_run=false; profile_exports+=("export REA_TEST=1"); write_profile'
+if [ "$rc" -eq 0 ] && grep -qxF 'export REA_TEST=1' "$work/home/.bash_profile" 2>/dev/null &&
+  ! grep -qF shellenv "$work/home/.bash_profile"; then ok "$n"; else bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null; fi
+n="MAC-02 macOS dry run that installs Homebrew plans the shellenv line and writes nothing"
+fresh_home
+# shellcheck disable=SC2016  # expanded inside the sandbox
+sandbox "$MACOS" 'PATH="$STUBS:/usr/bin:/bin"; dry_run=true; assume_yes=false; install_homebrew; write_profile'
+if [ "$rc" -eq 0 ] && grep -qxF "    $shellenv" "$work/out" && [ ! -e "$work/home/.bash_profile" ] &&
+  [ ! -e "$work/home/.rea-installer/installed" ]; then ok "$n"; else bad "$n"; show; fi
 # Real runs: curl's stub script only exits, so neither Homebrew's installer nor sudo runs, and TTY_PATH points at a
 # missing path so sudo -v is never planned outside a dry run (the sudo stub from FAIL-02 is still on PATH).
 stub curl 'echo "exit 1"'
