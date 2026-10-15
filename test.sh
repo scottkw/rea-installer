@@ -390,6 +390,38 @@ if [ "$rc" -eq 0 ] && grep -qF "Using JDK at $work/jdks/21.0.5" "$work/out" && g
 else
   bad "JAVA-03 macOS reused JDK 21 JAVA_HOME is not written to the profile"; show
 fi
+# install_ghidra and install_jdk never run on this rerun, as with --no-ghidra --with-extras (WR-03).
+n="JAVA-04 macOS --no-ghidra rerun writes its own JAVA_HOME whether or not the shell has it set"
+all_ok=true got=""
+# shellcheck disable=SC2016  # expanded inside the sandbox
+for mode in 'export JAVA_HOME="$ours"' 'unset JAVA_HOME'; do
+  fresh_home
+  mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+  mkdir -p "$work/home/.rea-installer"
+  printf 'brew:openjdk@21\n' >"$work/home/.rea-installer/installed"
+  sandbox "$MACOS" "$mode; profile_exports+=(\"export REA_TEST=1\"); write_profile"
+  line="$(grep '^export JAVA_HOME=' "$work/home/.bash_profile" 2>/dev/null)"
+  got="$got [$mode: rc=$rc $line]"
+  if [ "$rc" -ne 0 ] || [ "$line" != "export JAVA_HOME=\"$ours\"" ]; then all_ok=false; show; fi
+done
+if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; printf '    %s\n' "$got"; fi
+# The old block is the only proof of ownership here; rewriting it uses BSD sed -i ''.
+n="JAVA-04 macOS --no-ghidra rerun keeps its own JAVA_HOME owned only through the old block"
+if [ "$(uname -s)" = Darwin ]; then
+  fresh_home
+  mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
+  printf '%s\n' '# >>> rea-installer >>>' "export JAVA_HOME=\"$ours\"" '# <<< rea-installer <<<' >"$work/home/.bash_profile"
+  sandbox "$MACOS" 'unset JAVA_HOME; profile_exports+=("export REA_TEST=1"); write_profile'
+  if [ "$rc" -eq 0 ] && [ "$(grep -cx '# >>> rea-installer >>>' "$work/home/.bash_profile")" = 1 ] &&
+    [ "$(grep -c '^export JAVA_HOME=' "$work/home/.bash_profile")" = 1 ] &&
+    grep -qxF "export JAVA_HOME=\"$ours\"" "$work/home/.bash_profile"; then
+    ok "$n"
+  else
+    bad "$n"; show; sed 's/^/    /' "$work/home/.bash_profile" 2>/dev/null
+  fi
+else
+  skip "$n (macOS only)"
+fi
 fresh_home
 mkjdk "$ours" "echo 'openjdk version \"21.0.5\" 2024-10-15' >&2"
 # shellcheck disable=SC2016  # expanded inside the sandbox
@@ -409,6 +441,18 @@ if [ "$rc" -ne 0 ] && grep -qF 'brew --prefix failed' "$work/out" && ! grep -qx 
 else
   bad "JAVA-02 macOS install_jdk stops when brew cannot locate openjdk@21"; show
 fi
+# A user with Ghidra and no owned JDK never needs brew --prefix, whatever their JAVA_HOME (IN-03).
+n="JAVA-03 macOS install_ghidra with Ghidra present and no owned JDK does not need brew --prefix"
+all_ok=true
+for mode in 'unset JAVA_HOME' "export JAVA_HOME=\"$work/jdks/17\"" "export JAVA_HOME=\"$work/jdks/21.0.5\""; do
+  fresh_home
+  sandbox "$MACOS" "$mode; install_ghidra; profile_exports+=(\"export REA_TEST=1\"); write_profile; echo continued"
+  if [ "$rc" -ne 0 ] || ! grep -qF 'Ghidra already available' "$work/out" || ! grep -qx continued "$work/out" ||
+    grep -qF 'brew --prefix failed' "$work/out" || grep -q '^export JAVA_HOME=' "$work/home/.bash_profile" 2>/dev/null; then
+    all_ok=false; printf '    mode: %s\n' "$mode"; show
+  fi
+done
+if [ "$all_ok" = true ]; then ok "$n"; else bad "$n"; fi
 rm -f "$STUBS/brew" "$STUBS/ghidraRun"
 # A dry run on a Mac without Homebrew plans the default prefix. The PATH leaves out any real brew.
 case "$(uname -m)" in arm64) p=/opt/homebrew ;; *) p=/usr/local ;; esac

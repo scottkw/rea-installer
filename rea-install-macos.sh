@@ -28,6 +28,7 @@ with_ghidra=true
 with_android=false
 with_extras=false
 profile_exports=()
+jdk_chosen=false # set when install_jdk points this run's JAVA_HOME at the script's own JDK
 
 log() { printf '==> %s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
@@ -151,9 +152,16 @@ jdk_home() {
   printf '%s/libexec/openjdk.jdk/Contents/Home' "$prefix"
 }
 
-# Ownership comes from what the script installed, not the caller's environment, so a rerun from a shell that never sourced the block keeps our JAVA_HOME (JAVA-04).
+# Ownership comes from what the script installed, not the caller's environment (JAVA-04).
+# The ledger is checked first so brew --prefix runs only when an old block exports a JAVA_HOME (IN-03).
+# Callers use this as an if condition, where set -e is off: `|| exit 1` keeps jdk_home's die fatal.
 jdk_owned() {
-  grep -qxF "brew:$JDK_FORMULA" "$STATE_FILE" 2>/dev/null || grep -qxF "export JAVA_HOME=\"$1\"" "$(profile_file)" 2>/dev/null
+  local profile ours
+  grep -qxF "brew:$JDK_FORMULA" "$STATE_FILE" 2>/dev/null && return 0
+  profile="$(profile_file)"
+  grep -q '^export JAVA_HOME=' "$profile" 2>/dev/null || return 1
+  ours="$(jdk_home)" || exit 1
+  grep -qxF "export JAVA_HOME=\"$ours\"" "$profile"
 }
 
 install_jdk() {
@@ -169,6 +177,7 @@ install_jdk() {
   brew_install "$JDK_FORMULA"
   # REA validates the JDK via JAVA_HOME; setup copies it into agent registrations.
   export JAVA_HOME="$ours"
+  jdk_chosen=true
   [ "$dry_run" = true ] || jdk_usable "$ours" || die "Homebrew $JDK_FORMULA at $ours does not run."
 }
 
@@ -191,14 +200,14 @@ install_jadx_jar() {
 }
 
 install_ghidra() {
-  local ours
-  ours="$(jdk_home)"
   if command -v ghidraRun >/dev/null 2>&1 || [ -n "${GHIDRA_INSTALL_DIR:-}" ]; then
     log "Ghidra already available (left as-is)"
-    if jdk_owned "$ours"; then
+    if jdk_owned; then
       install_jdk
     fi
   else
+    local ours
+    ours="$(jdk_home)"
     install_jdk
     # ghidra depends on openjdk@21; installing it ourselves records it, so uninstall removes it.
     if [ "${JAVA_HOME:-}" != "$ours" ]; then
@@ -209,12 +218,17 @@ install_ghidra() {
 }
 
 write_profile() {
-  # Only the script's own JDK goes in the block: a reused user JAVA_HOME is never written (JAVA-03), and a rerun that skips install_jdk keeps ours (JAVA-04).
-  if [ -n "${JAVA_HOME:-}" ]; then
+  # Only the script's own JDK goes in the block, and a usable user JAVA_HOME is never written (JAVA-03).
+  # Whether ours stays depends on what the script installed, not on whether the caller's shell sourced the old block (JAVA-04, WR-03).
+  local owned=false
+  jdk_owned && owned=true
+  if [ "$jdk_chosen" = true ] || [ "$owned" = true ]; then
     local ours
     ours="$(jdk_home)"
-    if [ "$JAVA_HOME" = "$ours" ]; then
-      profile_exports+=("export JAVA_HOME=\"$JAVA_HOME\"")
+    if [ "${JAVA_HOME:-}" = "$ours" ] || { [ "$owned" = true ] && ! jdk_usable "${JAVA_HOME:-}" && jdk_usable "$ours"; }; then
+      # rea setup in step 9 must see the value the block writes.
+      export JAVA_HOME="$ours"
+      profile_exports+=("export JAVA_HOME=\"$ours\"")
     fi
   fi
   if ((${#profile_exports[@]} > 0)); then
