@@ -23,6 +23,8 @@ PROFILE_BEGIN="# >>> rea-installer >>>"
 PROFILE_END="# <<< rea-installer <<<"
 # Internal and assigned unconditionally, so an inherited value cannot pre-answer prompts; test.sh points it elsewhere after sourcing.
 TTY_PATH="/dev/tty"
+# Homebrew 7 asks before installing dependencies whenever it has a terminal, which hangs --yes; older Homebrew ignores this.
+export HOMEBREW_NO_ASK=1
 
 assume_yes=false
 dry_run=false

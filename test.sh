@@ -198,6 +198,19 @@ else
   bad "FAIL-03 failed brew install is reported and not recorded"; show
 fi
 
+# ---------------------------------------------------------------- MAC-03 brew ask mode
+# Homebrew 7 asks before installing dependencies when it has a terminal, which hangs --yes.
+fresh_home
+# shellcheck disable=SC2016  # expanded by the stub
+stub brew 'case "$1" in list) exit 1 ;; install) echo "ask=${HOMEBREW_NO_ASK:-unset}" ;; esac'
+unset HOMEBREW_NO_ASK # the value must come from the script, not the caller
+sandbox "$MACOS" 'brew_install rea-test-formula'
+if [ "$rc" -eq 0 ] && grep -qx 'ask=1' "$work/out"; then
+  ok "MAC-03 macOS brew install runs with HOMEBREW_NO_ASK=1"
+else
+  bad "MAC-03 macOS brew install runs with HOMEBREW_NO_ASK=1"; show
+fi
+
 # ---------------------------------------------------------------- UNIN-01 bash uninstall
 # Each script's sed -i and tac/tail -r only work on its own OS. The ledger pins npm to the stub, and holds
 # only npm: and profile: lines: on a dev Mac load_brew puts the real brew before the stubs.
